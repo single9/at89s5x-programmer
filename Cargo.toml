@@ -1,0 +1,11 @@
+[package]
+name = "at89s51-isp"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.104"
+clap = { version = "4.6.6", features = ["derive"] }
+embedded-hal = "1.0.0"
+ftdi-embedded-hal = { version = "0.24.0", features = ["libftd2xx"] }
+ihex = "3.0.0"
