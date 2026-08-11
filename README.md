@@ -36,12 +36,26 @@ cap across `VCC`/`GND`.
 | AD0    | 8           | SCK (P1.7) |
 | AD1    | 6           | MOSI (P1.5) |
 | AD2    | 7           | MISO (P1.6) |
-| AD3    | 9           | RST |
+| AD3    | 9           | RST (through R1, see below) |
 | GND    | 20          | GND |
 
 VCC (pin 40) and the crystal circuit on XTAL1/XTAL2 (pins 19/18) must
 already be powered and running on the target board — this tool does not
 supply either.
+
+### No manual reset button
+
+Entering ISP mode doesn't require a button: `enter_programming_mode()`
+(`src/isp.rs`) drives RST directly through AD3, so running `cargo run --
+flash firmware.hex` right after plugging in the FT232H is enough — the
+pulse/enable sequence happens automatically every time.
+
+Add **R1, a 10 kΩ resistor from RST to GND**, so RST has a defined level
+whenever the FT232H isn't actively driving it (before the programmer opens
+the device, or if it's unplugged) — without it RST would float and could
+spuriously reset the target while it's just running its own firmware. AD3
+drives RST directly (a strong push-pull output), so it overrides the weak
+pull-down without any conflict.
 
 ## Usage
 
