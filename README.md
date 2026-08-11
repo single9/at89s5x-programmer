@@ -24,6 +24,13 @@ Two hardware requirements that are easy to miss:
 
 ## Wiring (FT232H → AT89S51 DIP-40)
 
+![Wiring diagram](docs/wiring.svg)
+
+Also needed (shown in the diagram, not driven by this tool): `EA/VPP` tied
+to `+5V` so the CPU executes from internal flash, a crystal (e.g.
+11.0592 MHz) with two ~22 pF load caps on `XTAL1`/`XTAL2`, and a decoupling
+cap across `VCC`/`GND`.
+
 | FT232H | AT89S51 pin | Function |
 |--------|-------------|----------|
 | AD0    | 8           | SCK (P1.7) |
