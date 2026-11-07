@@ -1,3 +1,4 @@
+mod bitbang;
 mod hexfile;
 mod isp;
 
@@ -5,11 +6,13 @@ use std::fs;
 use std::path::PathBuf;
 
 use anyhow::{ensure, Context, Result};
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
+use embedded_hal::digital::OutputPin;
+use embedded_hal::spi::SpiBus;
 use ftdi_embedded_hal as hal;
 use ftdi_embedded_hal::libftd2xx::{Ft232h, Ftdi};
 
-use isp::{At89s51Programmer, AT89S51_FLASH_SIZE, AT89S51_SIGNATURE};
+use isp::{At89s51Programmer, Chip, DEFAULT_FLASH_SIZE};
 
 /// AT89S51 SPI ISP programmer, driven through an FT232H USB-SPI adapter.
 ///
@@ -28,12 +31,23 @@ struct Cli {
     #[arg(long, global = true)]
     serial: Option<String>,
 
+    /// USB adapter type. ft232h uses MPSSE hardware SPI; ft232r (FT232RL)
+    /// uses software SPI over synchronous bit-bang (D0=SCK, D1=MOSI, D2=MISO, D3=RST).
+    #[arg(long, global = true, value_enum, default_value_t = Adapter::Ft232h)]
+    adapter: Adapter,
+
     /// SPI clock in Hz. Must stay below 1/16 of the target's crystal frequency.
     #[arg(long, global = true, default_value_t = 100_000)]
     clock_hz: u32,
 
     #[command(subcommand)]
     command: Command,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum Adapter {
+    Ft232h,
+    Ft232r,
 }
 
 #[derive(Subcommand)]
@@ -56,7 +70,7 @@ enum Command {
     Verify { file: PathBuf },
 }
 
-fn open_programmer(
+fn open_ft232h(
     serial: Option<&str>,
     clock_hz: u32,
 ) -> Result<At89s51Programmer<hal::Spi<Ft232h>, hal::OutputPin<Ft232h>>> {
@@ -85,27 +99,51 @@ fn print_progress(done: usize, total: usize) {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    let mut prog = open_programmer(cli.serial.as_deref(), cli.clock_hz)?;
+    match cli.adapter {
+        Adapter::Ft232h => {
+            let prog = open_ft232h(cli.serial.as_deref(), cli.clock_hz)?;
+            execute(prog, cli.command)
+        }
+        Adapter::Ft232r => {
+            let (spi, rst) = bitbang::open(cli.serial.as_deref(), cli.clock_hz)?;
+            execute(At89s51Programmer::new(spi, rst), cli.command)
+        }
+    }
+}
 
+fn execute<SPI, RST, E1, E2>(mut prog: At89s51Programmer<SPI, RST>, command: Command) -> Result<()>
+where
+    SPI: SpiBus<u8, Error = E1>,
+    RST: OutputPin<Error = E2>,
+    E1: std::error::Error + Send + Sync + 'static,
+    E2: std::error::Error + Send + Sync + 'static,
+{
     prog.enter_programming_mode()?;
-    let result = run(&mut prog, cli.command);
+    let result = run(&mut prog, command);
     prog.exit_programming_mode()?;
     result
 }
 
-fn run(prog: &mut At89s51Programmer<hal::Spi<Ft232h>, hal::OutputPin<Ft232h>>, command: Command) -> Result<()> {
+fn run<SPI, RST, E1, E2>(prog: &mut At89s51Programmer<SPI, RST>, command: Command) -> Result<()>
+where
+    SPI: SpiBus<u8, Error = E1>,
+    RST: OutputPin<Error = E2>,
+    E1: std::error::Error + Send + Sync + 'static,
+    E2: std::error::Error + Send + Sync + 'static,
+{
     let signature = prog.read_signature()?;
+    let chip = Chip::from_signature(signature);
     eprintln!(
-        "Signature: {:02X} {:02X} {:02X}{}",
+        "Signature: {:02X} {:02X} {:02X} ({})",
         signature[0],
         signature[1],
         signature[2],
-        if signature == AT89S51_SIGNATURE {
-            " (AT89S51)"
-        } else {
-            " (unexpected - continuing anyway)"
+        match chip {
+            Some(chip) => chip.name().to_string(),
+            None => format!("unrecognised - assuming {DEFAULT_FLASH_SIZE} bytes flash, continuing anyway"),
         }
     );
+    let flash_size = chip.map_or(DEFAULT_FLASH_SIZE, Chip::flash_size);
 
     match command {
         Command::Info => {}
@@ -119,7 +157,7 @@ fn run(prog: &mut At89s51Programmer<hal::Spi<Ft232h>, hal::OutputPin<Ft232h>>, c
             no_erase,
             no_verify,
         } => {
-            let image = load_hex(&file)?;
+            let image = load_hex(&file, flash_size)?;
 
             if !no_erase {
                 eprintln!("Erasing chip...");
@@ -136,7 +174,7 @@ fn run(prog: &mut At89s51Programmer<hal::Spi<Ft232h>, hal::OutputPin<Ft232h>>, c
             }
         }
         Command::Verify { file } => {
-            let image = load_hex(&file)?;
+            let image = load_hex(&file, flash_size)?;
             eprintln!("Verifying {} bytes...", image.len());
             prog.verify_flash(&image, print_progress)?;
             eprintln!("Verify OK.");
@@ -146,9 +184,9 @@ fn run(prog: &mut At89s51Programmer<hal::Spi<Ft232h>, hal::OutputPin<Ft232h>>, c
     Ok(())
 }
 
-fn load_hex(file: &PathBuf) -> Result<Vec<u8>> {
+fn load_hex(file: &PathBuf, flash_size: usize) -> Result<Vec<u8>> {
     let text = fs::read_to_string(file).with_context(|| format!("failed to read {}", file.display()))?;
-    let image = hexfile::load(&text, AT89S51_FLASH_SIZE)?;
+    let image = hexfile::load(&text, flash_size)?;
     ensure!(!image.is_empty(), "HEX file produced an empty image");
     Ok(image)
 }

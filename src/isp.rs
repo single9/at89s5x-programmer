@@ -11,13 +11,45 @@ use anyhow::{bail, Context, Result};
 use embedded_hal::digital::OutputPin;
 use embedded_hal::spi::SpiBus;
 
-pub const AT89S51_FLASH_SIZE: usize = 4096;
-pub const AT89S51_SIGNATURE: [u8; 3] = [0x1E, 0x51, 0xFF];
+/// Flash size assumed when the signature is not recognised.
+pub const DEFAULT_FLASH_SIZE: usize = 4096;
+
+/// Supported chips, identified by their signature bytes
+/// (0x000 = 0x1E Atmel, 0x100 = device id, 0x200 = 0x06).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Chip {
+    At89s51,
+    At89s52,
+}
+
+impl Chip {
+    pub fn from_signature(sig: [u8; 3]) -> Option<Self> {
+        match sig {
+            [0x1E, 0x51, 0x06] => Some(Chip::At89s51),
+            [0x1E, 0x52, 0x06] => Some(Chip::At89s52),
+            _ => None,
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Chip::At89s51 => "AT89S51",
+            Chip::At89s52 => "AT89S52",
+        }
+    }
+
+    pub fn flash_size(self) -> usize {
+        match self {
+            Chip::At89s51 => 4096,
+            Chip::At89s52 => 8192,
+        }
+    }
+}
 
 /// Delay after each written byte, waiting for the internal write cycle to finish.
 const BYTE_WRITE_DELAY: Duration = Duration::from_millis(4);
 /// Delay after a chip-erase command, waiting for the erase cycle to finish.
-const CHIP_ERASE_DELAY: Duration = Duration::from_millis(30);
+const CHIP_ERASE_DELAY: Duration = Duration::from_millis(500);
 /// Delay after asserting RST, letting the crystal oscillator restart/stabilize.
 const RESET_SETTLE_DELAY: Duration = Duration::from_millis(20);
 
@@ -80,8 +112,10 @@ where
 
     pub fn read_signature(&mut self) -> Result<[u8; 3]> {
         let mut sig = [0u8; 3];
-        for (addr, byte) in sig.iter_mut().enumerate() {
-            let mut buf = [0x28, 0x00, addr as u8, 0x00];
+        // Signature bytes live at 0x000, 0x100, 0x200: the index goes in the
+        // upper address byte (A11..A8).
+        for (index, byte) in sig.iter_mut().enumerate() {
+            let mut buf = [0x28, index as u8, 0x00, 0x00];
             self.spi
                 .transfer_in_place(&mut buf)
                 .context("SPI transfer failed during Read Signature Byte")?;

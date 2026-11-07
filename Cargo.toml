@@ -9,3 +9,4 @@ clap = { version = "4.6.6", features = ["derive"] }
 embedded-hal = "1.0.0"
 ftdi-embedded-hal = { version = "0.24.0", features = ["libftd2xx"] }
 ihex = "3.0.0"
+rusb = "0.9.4"
