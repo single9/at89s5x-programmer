@@ -72,6 +72,8 @@ working as a COM port; Windows and macOS are untested.
 
 ### FT232RL → AT89S51 (DIP-40)
 
+![FT232RL wiring diagram](docs/wiring-ft232r.svg)
+
 | FT232RL pin | Bit-bang | AT89S51 pin | Function |
 |-------------|----------|-------------|----------|
 | TXD         | D0       | 8           | SCK (P1.7) |

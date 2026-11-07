@@ -1,0 +1,163 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 760" font-family="Menlo, Consolas, monospace">
+  <rect x="0" y="0" width="1100" height="760" fill="#ffffff"/>
+
+  <style>
+    .wire { stroke:#333; stroke-width:2; fill:none; }
+    .chip { fill:#fdfdfd; stroke:#333; stroke-width:2; }
+    .pinlabel { font-size:13px; fill:#111; }
+    .rightlabel { font-size:12px; fill:#111; }
+    .caption { font-size:12px; fill:#555; }
+    .smallnote { font-size:10px; fill:#555; }
+    .complabel { font-size:10px; fill:#111; }
+    .title { font-size:17px; fill:#111; font-weight:bold; }
+    .boxtitle { font-size:14px; fill:#111; font-weight:bold; }
+    .boxcaption { font-size:11px; fill:#555; }
+    .dot { fill:#333; }
+    .netlabel { font-size:10px; fill:#c0392b; }
+  </style>
+
+  <text x="20" y="28" class="title">AT89S51 SPI ISP wiring (FT232RL, bit-bang)</text>
+
+  <!-- ================= AT89S51 ================= -->
+  <rect x="340" y="90" width="220" height="380" class="chip"/>
+  <text x="450" y="115" text-anchor="middle" class="boxtitle">AT89S51</text>
+  <text x="450" y="132" text-anchor="middle" class="boxcaption">(DIP-40, only relevant pins shown)</text>
+
+  <!-- +5V rail: ties VCC and EA/VPP together -->
+  <text x="210" y="150" text-anchor="end" class="netlabel">+5V (external supply)</text>
+  <line x1="220" y1="170" x2="220" y2="250" class="wire"/>
+
+  <line x1="220" y1="170" x2="340" y2="170" class="wire"/>
+  <circle cx="340" cy="170" r="3" class="dot"/>
+  <text x="330" y="162" text-anchor="end" class="pinlabel">VCC — pin 40</text>
+
+  <line x1="220" y1="250" x2="340" y2="250" class="wire"/>
+  <circle cx="340" cy="250" r="3" class="dot"/>
+  <text x="330" y="242" text-anchor="end" class="pinlabel">EA/VPP — pin 31</text>
+  <text x="330" y="264" text-anchor="end" class="smallnote">(tie high — required for internal flash execution)</text>
+
+  <!-- C1: VCC/GND decoupling, branches off the +5V rail -->
+  <circle cx="220" cy="210" r="3" class="dot"/>
+  <line x1="220" y1="210" x2="100" y2="210" class="wire"/>
+  <line x1="100" y1="210" x2="100" y2="394" class="wire"/>
+  <line x1="85" y1="394" x2="115" y2="394" class="wire"/>
+  <line x1="85" y1="402" x2="115" y2="402" class="wire"/>
+  <line x1="100" y1="402" x2="100" y2="440" class="wire"/>
+  <line x1="90" y1="440" x2="110" y2="440" class="wire"/>
+  <line x1="94" y1="446" x2="106" y2="446" class="wire"/>
+  <line x1="98" y1="452" x2="102" y2="452" class="wire"/>
+  <text x="122" y="398" class="complabel">C1</text>
+  <text x="122" y="412" class="smallnote">100nF</text>
+  <text x="100" y="470" text-anchor="middle" class="smallnote">(target board GND)</text>
+
+  <!-- Crystal Y1 on XTAL1/XTAL2, with load caps C2/C3 -->
+  <line x1="180" y1="330" x2="340" y2="330" class="wire"/>
+  <circle cx="340" cy="330" r="3" class="dot"/>
+  <text x="330" y="322" text-anchor="end" class="pinlabel">XTAL1 — pin 19</text>
+
+  <line x1="180" y1="410" x2="340" y2="410" class="wire"/>
+  <circle cx="340" cy="410" r="3" class="dot"/>
+  <text x="330" y="402" text-anchor="end" class="pinlabel">XTAL2 — pin 18</text>
+
+  <line x1="180" y1="330" x2="180" y2="356" class="wire"/>
+  <line x1="180" y1="384" x2="180" y2="410" class="wire"/>
+  <rect x="160" y="356" width="40" height="28" fill="#fdfdfd" stroke="#333" stroke-width="2"/>
+  <text x="180" y="374" text-anchor="middle" class="smallnote">Y1</text>
+  <text x="206" y="374" class="smallnote">11.0592MHz</text>
+
+  <circle cx="290" cy="330" r="3" class="dot"/>
+  <line x1="290" y1="330" x2="290" y2="454" class="wire"/>
+  <line x1="280" y1="454" x2="300" y2="454" class="wire"/>
+  <line x1="280" y1="462" x2="300" y2="462" class="wire"/>
+  <line x1="290" y1="462" x2="290" y2="488" class="wire"/>
+  <line x1="280" y1="488" x2="300" y2="488" class="wire"/>
+  <line x1="284" y1="494" x2="296" y2="494" class="wire"/>
+  <line x1="288" y1="500" x2="292" y2="500" class="wire"/>
+  <text x="246" y="466" class="smallnote">C2 22pF</text>
+
+  <circle cx="320" cy="410" r="3" class="dot"/>
+  <line x1="320" y1="410" x2="320" y2="534" class="wire"/>
+  <line x1="310" y1="534" x2="330" y2="534" class="wire"/>
+  <line x1="310" y1="542" x2="330" y2="542" class="wire"/>
+  <line x1="320" y1="542" x2="320" y2="572" class="wire"/>
+  <line x1="310" y1="572" x2="330" y2="572" class="wire"/>
+  <line x1="314" y1="578" x2="326" y2="578" class="wire"/>
+  <line x1="318" y1="584" x2="322" y2="584" class="wire"/>
+  <text x="328" y="558" class="smallnote">C3 22pF</text>
+
+  <!-- AT89S51 GND — real wire across to FT232H GND (the one ground link that must
+       physically bridge the two boards; the caps/resistor above just reference
+       whatever ground plane is local to the target board) -->
+  <line x1="450" y1="470" x2="450" y2="560" class="wire"/>
+  <circle cx="450" cy="470" r="3" class="dot"/>
+  <text x="458" y="520" class="pinlabel">GND — pin 20</text>
+
+  <!-- ================= SPI signals: AT89S51 -> FT232H (orthogonal routing) ================= -->
+  <circle cx="560" cy="170" r="3" class="dot"/>
+  <line x1="560" y1="170" x2="600" y2="170" class="wire"/>
+  <line x1="600" y1="170" x2="600" y2="230" class="wire"/>
+  <line x1="600" y1="230" x2="780" y2="230" class="wire"/>
+  <text x="570" y="158" class="rightlabel">P1.7 / SCK (pin 8)</text>
+
+  <circle cx="560" cy="250" r="3" class="dot"/>
+  <line x1="560" y1="250" x2="630" y2="250" class="wire"/>
+  <line x1="630" y1="250" x2="630" y2="310" class="wire"/>
+  <line x1="630" y1="310" x2="780" y2="310" class="wire"/>
+  <text x="570" y="238" class="rightlabel">P1.6 / MISO (pin 7)</text>
+
+  <circle cx="560" cy="330" r="3" class="dot"/>
+  <line x1="560" y1="330" x2="660" y2="330" class="wire"/>
+  <line x1="660" y1="330" x2="660" y2="390" class="wire"/>
+  <line x1="660" y1="390" x2="780" y2="390" class="wire"/>
+  <text x="570" y="318" class="rightlabel">P1.5 / MOSI (pin 6)</text>
+
+  <circle cx="560" cy="410" r="3" class="dot"/>
+  <line x1="560" y1="410" x2="690" y2="410" class="wire"/>
+  <line x1="690" y1="410" x2="690" y2="470" class="wire"/>
+  <line x1="690" y1="470" x2="780" y2="470" class="wire"/>
+  <text x="570" y="398" class="rightlabel">RST (pin 9)</text>
+
+  <!-- R1: RST pull-down, tapped on the RST line -->
+  <circle cx="615" cy="410" r="3" class="dot"/>
+  <line x1="615" y1="410" x2="615" y2="514" class="wire"/>
+  <rect x="603" y="514" width="24" height="20" fill="#fdfdfd" stroke="#333" stroke-width="2"/>
+  <line x1="615" y1="534" x2="615" y2="560" class="wire"/>
+  <text x="635" y="528" class="rightlabel">R1 10k&#937;</text>
+
+  <!-- ================= FT232H ================= -->
+  <rect x="780" y="140" width="220" height="380" class="chip"/>
+  <text x="890" y="165" text-anchor="middle" class="boxtitle">FT232RL breakout</text>
+  <text x="890" y="182" text-anchor="middle" class="boxcaption">(USB &#8596; PC)</text>
+
+  <circle cx="780" cy="230" r="3" class="dot"/>
+  <text x="792" y="234" class="pinlabel">TXD (D0 &#8594; SCK)</text>
+
+  <circle cx="780" cy="310" r="3" class="dot"/>
+  <text x="792" y="314" class="pinlabel">RTS# (D2 &#8592; MISO)</text>
+
+  <circle cx="780" cy="390" r="3" class="dot"/>
+  <text x="792" y="394" class="pinlabel">RXD (D1 &#8594; MOSI)</text>
+
+  <circle cx="780" cy="470" r="3" class="dot"/>
+  <text x="792" y="474" class="pinlabel">CTS# (D3 &#8594; RST)</text>
+
+  <line x1="890" y1="520" x2="890" y2="560" class="wire"/>
+  <circle cx="890" cy="520" r="3" class="dot"/>
+  <text x="898" y="543" class="pinlabel">GND</text>
+
+  <!-- ================= required GND link between the two boards ================= -->
+  <line x1="450" y1="560" x2="890" y2="560" class="wire"/>
+  <circle cx="450" cy="560" r="3" class="dot"/>
+  <circle cx="615" cy="560" r="3" class="dot"/>
+  <circle cx="890" cy="560" r="3" class="dot"/>
+  <line x1="730" y1="560" x2="730" y2="576" class="wire"/>
+  <line x1="720" y1="576" x2="740" y2="576" class="wire"/>
+  <line x1="724" y1="582" x2="736" y2="582" class="wire"/>
+  <line x1="728" y1="588" x2="732" y2="588" class="wire"/>
+  <text x="745" y="584" class="caption">(required — ties FT232RL GND to the target board)</text>
+
+  <!-- ================= notes ================= -->
+  <text x="20" y="700" class="caption">SCK must stay below 1/16 of the target's crystal frequency (100 kHz default is safe for crystals &#8805; 3.2 MHz).</text>
+  <text x="20" y="717" class="caption">The FT232RL does not power the target or supply its clock. Set the breakout's VCCIO jumper (3.3 V / 5 V) to match the target's supply.</text>
+  <text x="20" y="734" class="caption">R1 keeps RST low when idle. Run with: cargo run -- --adapter ft232r flash firmware.hex</text>
+</svg>
