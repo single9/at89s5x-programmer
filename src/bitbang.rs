@@ -21,7 +21,7 @@ use std::rc::Rc;
 use anyhow::{Context, Result};
 use embedded_hal::digital::{self, OutputPin};
 use embedded_hal::spi::{self, SpiBus};
-use rusb::{request_type, Direction, Recipient, RequestType};
+use rusb::{Direction, Recipient, RequestType, request_type};
 use std::time::{Duration, Instant};
 
 const SCK: u8 = 1 << 0;
@@ -105,7 +105,9 @@ impl Inner {
             let mut buf = [0u8; USB_PACKET];
             while rx.len() < want {
                 if Instant::now() > deadline {
-                    return Err(BitbangError("FT232R: timed out waiting for readback".into()));
+                    return Err(BitbangError(
+                        "FT232R: timed out waiting for readback".into(),
+                    ));
                 }
                 let n = match self.dev.read_bulk(EP_IN, &mut buf, TIMEOUT) {
                     Ok(n) => n,
@@ -153,7 +155,11 @@ impl Inner {
     }
 
     fn set_rst(&mut self, high: bool) -> Result<(), BitbangError> {
-        let state = if high { self.out | RST } else { self.out & !RST };
+        let state = if high {
+            self.out | RST
+        } else {
+            self.out & !RST
+        };
         // Second entry: readback lags by one sample, so it shows the settled pins.
         let rx = self.run(&[state, state])?;
         if std::env::var_os("AT89S5X_ISP_TRACE").is_some() {
@@ -253,22 +259,33 @@ fn baud_to_value_index(baud: u32) -> (u16, u16) {
 /// rate is `baud * 16` and each SPI bit takes two samples, so `baud = clock / 8`.
 pub fn open(serial: Option<&str>, clock_hz: u32) -> Result<(BitbangSpi, BitbangRst)> {
     let mut found = None;
-    for device in rusb::devices().context("failed to enumerate USB devices")?.iter() {
-        let Ok(desc) = device.device_descriptor() else { continue };
+    for device in rusb::devices()
+        .context("failed to enumerate USB devices")?
+        .iter()
+    {
+        let Ok(desc) = device.device_descriptor() else {
+            continue;
+        };
         if desc.vendor_id() != FTDI_VID || desc.product_id() != FT232R_PID {
             continue;
         }
         let handle = match device.open() {
             Ok(h) => h,
             Err(e) => {
-                eprintln!("warning: found an FT232R but could not open it: {e} (USB permissions? see README)");
+                eprintln!(
+                    "warning: found an FT232R but could not open it: {e} (USB permissions? see README)"
+                );
                 continue;
             }
         };
-        if let Some(want) = serial {
-            if handle.read_serial_number_string_ascii(&desc).ok().as_deref() != Some(want) {
-                continue;
-            }
+        if let Some(want) = serial
+            && handle
+                .read_serial_number_string_ascii(&desc)
+                .ok()
+                .as_deref()
+                != Some(want)
+        {
+            continue;
         }
         found = Some(handle);
         break;

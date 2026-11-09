@@ -7,7 +7,7 @@ use std::io::{IsTerminal, Write};
 use std::path::PathBuf;
 use std::time::Instant;
 
-use anyhow::{ensure, Context, Result};
+use anyhow::{Context, Result, ensure};
 use clap::{Parser, Subcommand, ValueEnum};
 use embedded_hal::digital::OutputPin;
 use embedded_hal::spi::SpiBus;
@@ -125,7 +125,12 @@ struct Progress {
 
 impl Progress {
     fn new(label: &'static str) -> Self {
-        Self { label, tty: std::io::stderr().is_terminal(), start: Instant::now(), last_pct: usize::MAX }
+        Self {
+            label,
+            tty: std::io::stderr().is_terminal(),
+            start: Instant::now(),
+            last_pct: usize::MAX,
+        }
     }
 
     fn update(&mut self, done: usize, total: usize) {
@@ -148,7 +153,10 @@ impl Progress {
         if self.tty {
             eprint!("\r\x1b[2K");
         }
-        status(self.label, format!("{summary}  ({:.1} s)", self.start.elapsed().as_secs_f32()));
+        status(
+            self.label,
+            format!("{summary}  ({:.1} s)", self.start.elapsed().as_secs_f32()),
+        );
     }
 }
 
@@ -156,8 +164,13 @@ impl Progress {
 /// (0403:6001 = FT232R, 0403:6014 = FT232H).
 fn detect_adapter(serial: Option<&str>) -> Result<Adapter> {
     let mut first = None;
-    for device in rusb::devices().context("failed to enumerate USB devices")?.iter() {
-        let Ok(desc) = device.device_descriptor() else { continue };
+    for device in rusb::devices()
+        .context("failed to enumerate USB devices")?
+        .iter()
+    {
+        let Ok(desc) = device.device_descriptor() else {
+            continue;
+        };
         if desc.vendor_id() != 0x0403 {
             continue;
         }
@@ -225,7 +238,7 @@ where
         Command::Selftest => return prog.loopback_test(),
         Command::Probe { seconds } => return prog.probe(seconds),
         Command::Rst { level, seconds } => {
-            return prog.hold_rst(matches!(level, RstLevel::High), seconds)
+            return prog.hold_rst(matches!(level, RstLevel::High), seconds);
         }
         _ => {}
     }
@@ -245,16 +258,26 @@ where
     let t0 = Instant::now();
     let signature = prog.read_signature()?;
     let chip = Chip::from_signature(signature);
-    let sig = format!("{:02X} {:02X} {:02X}", signature[0], signature[1], signature[2]);
+    let sig = format!(
+        "{:02X} {:02X} {:02X}",
+        signature[0], signature[1], signature[2]
+    );
     let flash_size = chip.map_or(DEFAULT_FLASH_SIZE, Chip::flash_size);
     match chip {
         Some(chip) => status(
             "Device",
-            format!("{}  signature {sig}  {} KB flash", chip.name(), chip.flash_size() / 1024),
+            format!(
+                "{}  signature {sig}  {} KB flash",
+                chip.name(),
+                chip.flash_size() / 1024
+            ),
         ),
         None => status(
             "Device",
-            format!("unrecognised signature {sig}; assuming {} KB flash", DEFAULT_FLASH_SIZE / 1024),
+            format!(
+                "unrecognised signature {sig}; assuming {} KB flash",
+                DEFAULT_FLASH_SIZE / 1024
+            ),
         ),
     }
 
@@ -319,7 +342,8 @@ where
 }
 
 fn load_hex(file: &PathBuf, flash_size: usize) -> Result<Vec<u8>> {
-    let text = fs::read_to_string(file).with_context(|| format!("failed to read {}", file.display()))?;
+    let text =
+        fs::read_to_string(file).with_context(|| format!("failed to read {}", file.display()))?;
     let image = hexfile::load(&text, flash_size)?;
     ensure!(!image.is_empty(), "HEX file produced an empty image");
     Ok(image)

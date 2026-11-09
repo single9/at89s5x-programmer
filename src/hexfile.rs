@@ -1,6 +1,6 @@
 //! Intel HEX loading into a flat flash image, filled with 0xFF (erased state).
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use ihex::{Reader, Record};
 
 pub fn load(text: &str, flash_size: usize) -> Result<Vec<u8>> {
@@ -61,7 +61,10 @@ mod tests {
         let image = load(&text, 64).unwrap();
         assert_eq!(&image[0..3], &[0x75, 0x81, 0x00]);
         assert_eq!(image[0x10], 0xAB);
-        assert_eq!(image[3], 0xFF, "gap between records must stay erased (0xFF)");
+        assert_eq!(
+            image[3], 0xFF,
+            "gap between records must stay erased (0xFF)"
+        );
         assert_eq!(image.len(), 64);
     }
 

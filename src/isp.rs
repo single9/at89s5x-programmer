@@ -7,7 +7,7 @@
 use std::thread::sleep;
 use std::time::Duration;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use embedded_hal::digital::OutputPin;
 use embedded_hal::spi::SpiBus;
 
@@ -91,13 +91,19 @@ where
             last = buf;
 
             if attempt == 0 {
-                eprintln!("Warning: no reply to Programming Enable, retrying with a fresh RST pulse");
+                eprintln!(
+                    "Warning: no reply to Programming Enable, retrying with a fresh RST pulse"
+                );
             }
         }
         let hint = match last {
-            [0x00, 0x00, 0x00, 0x00] => "all 00: MISO is stuck low or the target is held in a bad state",
+            [0x00, 0x00, 0x00, 0x00] => {
+                "all 00: MISO is stuck low or the target is held in a bad state"
+            }
             [0xFF, 0xFF, 0xFF, 0xFF] => "all FF: MISO is floating high, nothing is driving it",
-            _ => "unstable replies: SCK is not reaching the target reliably, or its clock is unstable",
+            _ => {
+                "unstable replies: SCK is not reaching the target reliably, or its clock is unstable"
+            }
         };
         bail!(
             "target did not answer Programming Enable (last reply {:02X} {:02X} {:02X} {:02X}, {hint})\n\n\
@@ -106,7 +112,10 @@ where
              - the crystal is running (about 2 V on XTAL2, with load capacitors)\n  \
              - EA/VPP (pin 31) is tied to VCC\n  \
              - RST, SCK, MOSI and MISO go to pins 9, 8, 6 and 7",
-            last[0], last[1], last[2], last[3]
+            last[0],
+            last[1],
+            last[2],
+            last[3]
         );
     }
 
@@ -118,7 +127,12 @@ where
         self.spi
             .transfer_in_place(&mut rx)
             .context("SPI transfer failed during loopback test")?;
-        let hex = |b: &[u8]| b.iter().map(|x| format!("{x:02X}")).collect::<Vec<_>>().join(" ");
+        let hex = |b: &[u8]| {
+            b.iter()
+                .map(|x| format!("{x:02X}"))
+                .collect::<Vec<_>>()
+                .join(" ")
+        };
         eprintln!("sent:     {}", hex(&tx));
         eprintln!("received: {}", hex(&rx));
         if rx == tx {
@@ -166,7 +180,10 @@ where
                 .transfer_in_place(&mut buf)
                 .context("SPI transfer failed during probe")?;
             if last != Some(buf) {
-                eprintln!("reply: {:02X} {:02X} {:02X} {:02X}", buf[0], buf[1], buf[2], buf[3]);
+                eprintln!(
+                    "reply: {:02X} {:02X} {:02X} {:02X}",
+                    buf[0], buf[1], buf[2], buf[3]
+                );
                 last = Some(buf);
             }
             sleep(Duration::from_millis(50));
@@ -221,7 +238,11 @@ where
         Ok(())
     }
 
-    pub fn write_flash(&mut self, image: &[u8], mut progress: impl FnMut(usize, usize)) -> Result<()> {
+    pub fn write_flash(
+        &mut self,
+        image: &[u8],
+        mut progress: impl FnMut(usize, usize),
+    ) -> Result<()> {
         // Erased flash already reads 0xFF, so blank bytes are skipped.
         for (i, &byte) in image.iter().enumerate() {
             if byte != 0xFF {
@@ -245,7 +266,11 @@ where
         Ok(buf.chunks(4).map(|frame| frame[3]).collect())
     }
 
-    pub fn verify_flash(&mut self, image: &[u8], mut progress: impl FnMut(usize, usize)) -> Result<()> {
+    pub fn verify_flash(
+        &mut self,
+        image: &[u8],
+        mut progress: impl FnMut(usize, usize),
+    ) -> Result<()> {
         const BLOCK: usize = 32;
         for (n, expected) in image.chunks(BLOCK).enumerate() {
             let base = n * BLOCK;
