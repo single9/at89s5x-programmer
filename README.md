@@ -160,6 +160,19 @@ A good first check is `info`: it should print `Signature: 1E 51 06 (AT89S51)`
 or `1E 52 06 (AT89S52)`. `Programming Enable failed` means wiring, power, or
 the target's crystal needs checking.
 
+## Example
+
+`examples/blink_p1_0.hex` blinks an LED on P1.0 (pin 1) at about 2 Hz with a
+12 MHz crystal; `examples/blink_p1_0.asm` is its source. Wire the LED
+active-low (VCC, resistor, LED, P1.0), then:
+
+```sh
+cargo run -- --adapter ft232r flash examples/blink_p1_0.hex
+```
+
+Verified on a real AT89S52. RST must read low afterwards (R1 to GND) or the
+program will not run.
+
 ## Troubleshooting
 
 `Programming Enable failed` with reply `FF FF FF FF`, or replies that keep
