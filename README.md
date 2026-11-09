@@ -17,7 +17,10 @@ Instead it exposes an SPI-like serial programming interface: `RST`, `SCK`,
 `MOSI`, `MISO`. Programming is done by holding `RST` high and clocking a
 fixed instruction set (Programming Enable, Chip Erase, Read/Write Program
 Memory, Read Signature Byte) into the part — see `src/isp.rs` for the exact
-byte sequences, taken from the datasheets in `docs/datasheet/`.
+byte sequences, taken from the Microchip datasheets for the
+[AT89S51](https://www.microchip.com/en-us/product/AT89S51) and
+[AT89S52](https://www.microchip.com/en-us/product/AT89S52) ("Serial Programming
+Instruction Set").
 
 Two hardware requirements that are easy to miss:
 
@@ -204,4 +207,4 @@ A 12 MHz crystal is fine: SCK only has to stay below crystal / 16 (750 kHz).
 
 ## License
 
-[MIT](LICENSE). The datasheets in `docs/datasheet/` belong to their respective owners.
+[MIT](LICENSE). The vendor datasheets are not included; see the links above.

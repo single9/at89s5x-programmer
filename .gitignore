@@ -1,1 +1,3 @@
 /target
+# Local copies of the vendor datasheets (not redistributed)
+/docs/datasheet/
