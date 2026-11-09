@@ -15,7 +15,8 @@ is not obvious from the code.
 | `src/hexfile.rs` | Intel HEX loader |
 | `scripts/setup-linux.sh` | One-time udev rule + `plugdev` + libusb check |
 | `docs/datasheet/` | AT89S51 / AT89S52 datasheets (`.pdf` and `.md`) |
-| `docs/wiring.svg` | FT232H wiring diagram (not drawn for FT232RL) |
+| `docs/wiring.svg` | Wiring diagram for both adapters (same wiring, different pin names) |
+| `docs/schematic.svg` | KiCad schematic (programmer + minimal system + P1.0 LED, power-on reset); source not kept |
 
 ## Hardware facts (verified against the datasheets)
 

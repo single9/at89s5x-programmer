@@ -70,35 +70,24 @@ working as a COM port; Windows and macOS are untested.
 
 ## Wiring
 
-### FT232RL → AT89S51 (DIP-40)
-
-![FT232RL wiring diagram](docs/wiring-ft232r.svg)
-
-| FT232RL pin | Bit-bang | AT89S51 pin | Function |
-|-------------|----------|-------------|----------|
-| TXD         | D0       | 8           | SCK (P1.7) |
-| RXD         | D1       | 6           | MOSI (P1.5) |
-| RTS#        | D2       | 7           | MISO (P1.6), input |
-| CTS#        | D3       | 9           | RST (with R1, see below) |
-| GND         |          | 20          | GND |
-
-Set the board's VCCIO/jumper to the target's supply voltage (3.3 V or 5 V)
-so the logic levels match. Counterfeit FT232RL chips may misbehave in
-bit-bang mode.
-
-### FT232H → AT89S51 (DIP-40)
-
-> Not yet tested on real hardware; only the FT232RL path has been verified.
+### Adapter → AT89S51/S52 (DIP-40)
 
 ![Wiring diagram](docs/wiring.svg)
 
-| FT232H | AT89S51 pin | Function |
-|--------|-------------|----------|
-| AD0    | 8           | SCK (P1.7) |
-| AD1    | 6           | MOSI (P1.5) |
-| AD2    | 7           | MISO (P1.6) |
-| AD3    | 9           | RST (with R1, see below) |
-| GND    | 20          | GND |
+Both adapters use the same wiring; only the adapter-side pin names differ.
+
+| Signal | AT89S5x pin | FT232RL (bit-bang) | FT232H (MPSSE, untested) |
+|--------|-------------|--------------------|--------------------------|
+| SCK    | 8 (P1.7)    | TXD (D0)           | AD0 |
+| MOSI   | 6 (P1.5)    | RXD (D1)           | AD1 |
+| MISO   | 7 (P1.6)    | RTS# (D2), input   | AD2 |
+| RST    | 9 (with R1, see below) | CTS# (D3) | AD3 |
+| GND    | 20          | GND                | GND |
+
+Set the board's VCCIO/jumper to the target's supply voltage (3.3 V or 5 V)
+so the logic levels match. Counterfeit FT232RL chips may misbehave in
+bit-bang mode. The FT232H path has not been tested on real hardware; only
+the FT232RL path has been verified.
 
 ### Target circuit (both adapters)
 

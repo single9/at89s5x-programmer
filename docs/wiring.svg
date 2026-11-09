@@ -11,35 +11,35 @@
  .note{font-size:12px;fill:#555}
 </style>
 <rect width="1090" height="620" fill="#ffffff"/>
-<text x="30" y="36" class="title">FT232H (MPSSE) → AT89S51 / S52 wiring  [untested]</text>
-<rect x="110" y="90" width="190" height="370" class="box"/>
-<text x="205" y="116" text-anchor="middle" class="box-title">FT232H breakout</text>
-<text x="205" y="134" text-anchor="middle" class="small">(USB ↔ PC)</text>
+<text x="30" y="36" class="title">FT232RL / FT232H → AT89S51 / S52 wiring</text>
+<rect x="90" y="90" width="210" height="370" class="box"/>
+<text x="195" y="116" text-anchor="middle" class="box-title">FT232RL / FT232H</text>
+<text x="195" y="134" text-anchor="middle" class="small">(USB ↔ PC)</text>
 <rect x="520" y="90" width="260" height="370" class="box"/>
 <text x="650" y="116" text-anchor="middle" class="box-title">AT89S51 / S52</text>
 <text x="650" y="134" text-anchor="middle" class="small">(DIP-40, relevant pins only)</text>
 <line x1="300" y1="170" x2="520" y2="170" class="wire"/>
 <circle cx="300" cy="170" r="3.5" class="dot"/>
 <circle cx="520" cy="170" r="3.5" class="dot"/>
-<text x="290" y="174" text-anchor="end" class="pin">AD1</text>
+<text x="290" y="174" text-anchor="end" class="pin">RXD (D1) / AD1</text>
 <text x="530" y="174" class="pin">P1.5 (pin 6)</text>
 <text x="395" y="162" text-anchor="middle" class="sig">MOSI →</text>
 <line x1="300" y1="230" x2="520" y2="230" class="wire"/>
 <circle cx="300" cy="230" r="3.5" class="dot"/>
 <circle cx="520" cy="230" r="3.5" class="dot"/>
-<text x="290" y="234" text-anchor="end" class="pin">AD2</text>
+<text x="290" y="234" text-anchor="end" class="pin">RTS# (D2) / AD2</text>
 <text x="530" y="234" class="pin">P1.6 (pin 7)</text>
 <text x="395" y="222" text-anchor="middle" class="sig">← MISO</text>
 <line x1="300" y1="290" x2="520" y2="290" class="wire"/>
 <circle cx="300" cy="290" r="3.5" class="dot"/>
 <circle cx="520" cy="290" r="3.5" class="dot"/>
-<text x="290" y="294" text-anchor="end" class="pin">AD0</text>
+<text x="290" y="294" text-anchor="end" class="pin">TXD (D0) / AD0</text>
 <text x="530" y="294" class="pin">P1.7 (pin 8)</text>
 <text x="395" y="282" text-anchor="middle" class="sig">SCK →</text>
 <line x1="300" y1="350" x2="520" y2="350" class="wire"/>
 <circle cx="300" cy="350" r="3.5" class="dot"/>
 <circle cx="520" cy="350" r="3.5" class="dot"/>
-<text x="290" y="354" text-anchor="end" class="pin">AD3</text>
+<text x="290" y="354" text-anchor="end" class="pin">CTS# (D3) / AD3</text>
 <text x="530" y="354" class="pin">RST (pin 9)</text>
 <text x="395" y="342" text-anchor="middle" class="sig">RST →</text>
 <circle cx="440" cy="350" r="3.5" class="dot"/>
@@ -96,4 +96,5 @@
 <text x="30" y="530" class="note">EA/VPP (pin 31) must be tied to VCC so the CPU runs from internal flash.</text>
 <text x="30" y="548" class="note">SCK must stay below 1/16 of the target crystal frequency (default 100 kHz is safe for crystals ≥ 3.2 MHz).</text>
 <text x="30" y="566" class="note">R1 keeps RST low when the adapter is idle. The target needs its own power and running crystal.</text>
+<text x="30" y="584" class="note">FT232RL: Dn = bit-bang pin. FT232H: ADn = MPSSE pin (untested). Set VCCIO (3.3 V / 5 V) to match the target.</text>
 </svg>
