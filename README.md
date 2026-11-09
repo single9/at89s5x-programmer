@@ -6,7 +6,9 @@ A command-line ISP programmer for the Atmel/Microchip **AT89S51** and
 **AT89S52**, driven through a USB-to-serial/SPI adapter:
 
 - **FT232RL / FT232R** (cheap UART bridge boards): software SPI over
-  bit-bang mode
+  bit-bang mode. **FT232RNL**, the pin-compatible successor of the
+  discontinued FT232RL, is expected to work the same way but is
+  **untested on real hardware**
 - **FT232H**: hardware SPI over MPSSE (**untested on real hardware**)
 
 ## How it works

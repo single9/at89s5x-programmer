@@ -4,7 +4,7 @@
 
 Atmel / Microchip **AT89S51** 與 **AT89S52** 的命令列 ISP 燒錄工具，透過 USB 轉序列埠 / SPI 轉接器進行燒錄：
 
-- **FT232RL / FT232R** (便宜的 UART 橋接模組)：以 bit-bang 模式實作軟體 SPI
+- **FT232RL / FT232R** (便宜的 UART 橋接模組)：以 bit-bang 模式實作軟體 SPI。已停產的 FT232RL 的後繼品 **FT232RNL** 預期可用相同方式運作，但**尚未在實體硬體上測試**
 - **FT232H**：以 MPSSE 提供硬體 SPI (**尚未在實體硬體上測試**)
 
 ## 運作原理

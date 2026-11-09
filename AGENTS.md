@@ -64,6 +64,9 @@ is not obvious from the code.
   adapter wiring was unchanged), not the software. Blank
   0xFF bytes are skipped on write; progress prints every 256 bytes.
 - Not yet tried on a real AT89S51.
+- FT232RNL (successor of the EOL FT232RL) is listed in the README as expected
+  to work but untested. The code matches only VID/PID 0403:6001, so it should
+  be picked up if the RNL uses the same ID; run `selftest` to confirm.
 - **FT232H (MPSSE/D2XX) path is untested on real hardware** (no adapter
   available); it only compiles. The shared ISP logic is verified via FT232R.
 - Diagnostics: `selftest`, `probe`, `rst`, env `AT89S5X_ISP_TRACE=1`.
