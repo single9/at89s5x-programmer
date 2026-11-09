@@ -153,7 +153,7 @@ impl Inner {
         let state = if high { self.out | RST } else { self.out & !RST };
         // Second entry: readback lags by one sample, so it shows the settled pins.
         let rx = self.run(&[state, state])?;
-        if std::env::var_os("AT89S51_ISP_TRACE").is_some() {
+        if std::env::var_os("AT89S5X_ISP_TRACE").is_some() {
             let p = rx[1];
             eprintln!(
                 "trace: drove RST {} -> pins read back: SCK={} MOSI={} MISO={} RST={}",

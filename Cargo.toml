@@ -1,5 +1,5 @@
 [package]
-name = "at89s51-isp"
+name = "at89s5x-isp"
 version = "0.1.0"
 edition = "2024"
 

@@ -1,4 +1,4 @@
-# at89s51-isp
+# at89s5x-isp
 
 A command-line ISP programmer for the Atmel/Microchip **AT89S51** and
 **AT89S52**, driven through a USB-to-serial/SPI adapter:
@@ -37,8 +37,8 @@ sudo apt install build-essential pkg-config libusb-1.0-0-dev
 ### 2. Build
 
 ```sh
-git clone https://github.com/single9/8051-programmer.git && cd 8051-programmer
-cargo build --release          # binary: target/release/at89s51-isp
+git clone https://github.com/single9/at89s5x-programmer.git && cd at89s5x-programmer
+cargo build --release          # binary: target/release/at89s5x-isp
 ```
 
 ### 3. Linux USB permissions (FT232R, one time per computer)
@@ -149,7 +149,7 @@ cargo run -- probe --seconds 30
 cargo run -- rst high --seconds 20
 ```
 
-Set `AT89S51_ISP_TRACE=1` to print the pin states read back when RST changes.
+Set `AT89S5X_ISP_TRACE=1` to print the pin states read back when RST changes.
 
 A good first check is `info`: it should print `Signature: 1E 51 06 (AT89S51)`
 or `1E 52 06 (AT89S52)`. `Programming Enable failed` means wiring, power, or

@@ -60,7 +60,7 @@ is not obvious from the code.
 - Not yet tried on a real AT89S51.
 - **FT232H (MPSSE/D2XX) path is untested on real hardware** (no adapter
   available); it only compiles. The shared ISP logic is verified via FT232R.
-- Diagnostics: `selftest`, `probe`, `rst`, env `AT89S51_ISP_TRACE=1`.
+- Diagnostics: `selftest`, `probe`, `rst`, env `AT89S5X_ISP_TRACE=1`.
 - The previous signature code read the index from the wrong address byte and
   expected `1E 51 FF`; both were changed per the datasheet.
 - Lock bits and page-mode read/write are not implemented (byte mode only).
