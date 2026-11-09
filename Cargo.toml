@@ -17,3 +17,8 @@ rusb = "0.9.4"
 # FTD2XX.dll at startup (the FT232R path does not use D2XX at all).
 [target.'cfg(windows)'.dependencies]
 libftd2xx = { version = "0.33", features = ["static"] }
+
+# On macOS, build libusb from source and link it statically. Otherwise the
+# binary depends on Homebrew's libusb at an arm64-only path.
+[target.'cfg(target_os = "macos")'.dependencies]
+rusb = { version = "0.9.4", features = ["vendored"] }

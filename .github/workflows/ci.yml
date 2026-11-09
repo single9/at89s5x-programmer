@@ -47,9 +47,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y pkg-config libusb-1.0-0-dev
-      - name: Install libusb (macOS)
-        if: runner.os == 'macOS'
-        run: brew install libusb pkgconf
       - name: Test
         run: cargo test --locked
       - name: Build
