@@ -31,11 +31,11 @@ AT89S51/S52 透過類似 SPI 的序列介面燒錄：`RST`、`SCK`、`MOSI`、`M
 
 可直接從[發行頁](https://github.com/single9/at89s5x-programmer/releases/latest)下載 Linux (x86_64)、Windows (x86_64) 與 macOS (universal) 的預編譯執行檔。下載後請從步驟 3 (Linux)、4 (Windows) 或 5 (macOS) 繼續。若要自行編譯或使用 `cargo install`，請從步驟 1 開始。
 
-### 1. 編譯工具與函式庫
+### 1. 編譯工具
 
 ```sh
 # 先安裝 Rust 工具鏈 (https://rustup.rs)，在 Debian / Ubuntu 上再執行：
-sudo apt install build-essential pkg-config libusb-1.0-0-dev
+sudo apt install build-essential
 ```
 
 ### 2. 編譯

@@ -49,11 +49,11 @@ are on the [releases page](https://github.com/single9/at89s5x-programmer/release
 After downloading, continue at step 3 (Linux), 4 (Windows) or 5 (macOS). To
 build from source or use `cargo install`, start at step 1.
 
-### 1. Build tools and libraries
+### 1. Build tools
 
 ```sh
 # Rust toolchain (https://rustup.rs), then on Debian/Ubuntu:
-sudo apt install build-essential pkg-config libusb-1.0-0-dev
+sudo apt install build-essential
 ```
 
 ### 2. Build
