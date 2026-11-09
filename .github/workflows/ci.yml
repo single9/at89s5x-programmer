@@ -58,3 +58,30 @@ jobs:
         with:
           name: at89s5x-isp-${{ matrix.os }}
           path: target/release/${{ matrix.bin }}
+
+  # One macOS binary that runs on both Apple Silicon and Intel. libusb is built
+  # from source for each architecture (no Homebrew libusb, which is arm64-only).
+  macos-universal:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add targets
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - name: Build both architectures
+        run: |
+          cargo build --release --locked --target aarch64-apple-darwin
+          cargo build --release --locked --target x86_64-apple-darwin
+      - name: Combine and sign
+        run: |
+          mkdir out
+          lipo -create -output out/at89s5x-isp \
+            target/aarch64-apple-darwin/release/at89s5x-isp \
+            target/x86_64-apple-darwin/release/at89s5x-isp
+          # Apple Silicon refuses unsigned binaries; an ad-hoc signature is enough.
+          codesign --force --sign - out/at89s5x-isp
+          file out/at89s5x-isp
+          lipo -info out/at89s5x-isp
+      - uses: actions/upload-artifact@v4
+        with:
+          name: at89s5x-isp-macos-universal
+          path: out/at89s5x-isp
