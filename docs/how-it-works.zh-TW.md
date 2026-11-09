@@ -8,7 +8,6 @@
 
 ![系統架構](img/zh-TW/architecture.svg)
 
-- AT89S51 / S52 不具備 UART 啟動載入程式 (bootloader)，無法像部分 STC 型號一樣經由序列埠燒錄。
 - 這兩款晶片提供專用的 **ISP (In-System Programming)** 介面，透過 4 條訊號線進行 SPI 式通訊：`SCK` (時脈)、`MOSI` (主機送出)、`MISO` (晶片回覆)、`RST` (切換至燒錄模式)。
 - 本工具分為兩層：`isp.rs` 負責產生燒錄指令，`bitbang.rs` 負責將指令轉換為接腳上的電位變化。
 

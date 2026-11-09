@@ -10,7 +10,6 @@ No prior knowledge of SPI or the 8051 is required.
 
 ![System architecture](img/architecture.svg)
 
-- The AT89S51 / S52 has no UART bootloader, so it cannot be programmed over a serial port the way some STC parts can.
 - Both chips provide a dedicated **ISP (In-System Programming)** interface: SPI-style communication over four signal lines: `SCK` (clock), `MOSI` (host to chip), `MISO` (chip to host) and `RST` (selects programming mode).
 - The tool has two layers: `isp.rs` produces the programming commands, and `bitbang.rs` turns them into pin-level changes.
 

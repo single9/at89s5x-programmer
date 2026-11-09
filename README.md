@@ -15,9 +15,8 @@ A step-by-step explanation with diagrams is in
 [docs/how-it-works.md](docs/how-it-works.md)
 ([繁體中文](docs/how-it-works.zh-TW.md)).
 
-The AT89S51 (unlike the STC 89 series) does not have a UART bootloader.
-Instead it exposes an SPI-like serial programming interface: `RST`, `SCK`,
-`MOSI`, `MISO`. Programming is done by holding `RST` high and clocking a
+The AT89S51/S52 are programmed through an SPI-like serial interface: `RST`,
+`SCK`, `MOSI`, `MISO`. Programming is done by holding `RST` high and clocking a
 fixed instruction set (Programming Enable, Chip Erase, Read/Write Program
 Memory, Read Signature Byte) into the part — see `src/isp.rs` for the exact
 byte sequences, taken from the Microchip datasheets (not included in this
