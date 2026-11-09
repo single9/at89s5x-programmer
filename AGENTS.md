@@ -9,7 +9,7 @@ is not obvious from the code.
 
 | Path | Role |
 |------|------|
-| `src/main.rs` | CLI (clap), `--adapter ft232h\|ft232r`, `execute`/`run` generic over `SpiBus` + `OutputPin`; `selftest` = MOSI-MISO loopback, no target needed |
+| `src/main.rs` | CLI (clap), `--adapter` (auto-detected when omitted), `execute`/`run` generic over `SpiBus` + `OutputPin`; `selftest` = MOSI-MISO loopback, no target needed |
 | `src/isp.rs` | ISP protocol (`At89s51Programmer`), `Chip` detection from signature, delays |
 | `src/bitbang.rs` | FT232R software SPI over libusb (`rusb`), implements `SpiBus` + `OutputPin` |
 | `src/hexfile.rs` | Intel HEX loader |
@@ -57,6 +57,8 @@ is not obvious from the code.
   replies came from the target side (crystal/wiring), not the software. Blank
   0xFF bytes are skipped on write; progress prints every 256 bytes.
 - Not yet tried on a real AT89S51.
+- **FT232H (MPSSE/D2XX) path is untested on real hardware** (no adapter
+  available); it only compiles. The shared ISP logic is verified via FT232R.
 - Diagnostics: `selftest`, `probe`, `rst`, env `AT89S51_ISP_TRACE=1`.
 - The previous signature code read the index from the wrong address byte and
   expected `1E 51 FF`; both were changed per the datasheet.
@@ -71,5 +73,6 @@ is not obvious from the code.
 - Project lives on a `/mnt` volume owned by root: `sed -i` prints a
   permission warning (use Edit instead) and git needs
   `-c safe.directory='*'`.
-- Default adapter is `ft232h`; FT232RL users must pass `--adapter ft232r`.
+- Adapter is auto-detected from USB IDs (0403:6001 FT232R, 0403:6014 FT232H);
+  `--adapter` only overrides it.
 - Reply to the user in 台灣正體中文.

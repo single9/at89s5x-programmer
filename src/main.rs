@@ -27,14 +27,15 @@ use isp::{At89s51Programmer, Chip, DEFAULT_FLASH_SIZE};
 #[derive(Parser)]
 #[command(version, about)]
 struct Cli {
-    /// FTDI device serial number. If omitted, the first FT232H found is used.
+    /// FTDI device serial number. If omitted, the first supported adapter found is used.
     #[arg(long, global = true)]
     serial: Option<String>,
 
-    /// USB adapter type. ft232h uses MPSSE hardware SPI; ft232r (FT232RL)
-    /// uses software SPI over synchronous bit-bang (D0=SCK, D1=MOSI, D2=MISO, D3=RST).
-    #[arg(long, global = true, value_enum, default_value_t = Adapter::Ft232h)]
-    adapter: Adapter,
+    /// USB adapter type. Detected automatically from the USB IDs when omitted.
+    /// ft232h uses MPSSE hardware SPI; ft232r (FT232RL) uses software SPI over
+    /// synchronous bit-bang (D0=SCK, D1=MOSI, D2=MISO, D3=RST).
+    #[arg(long, global = true, value_enum)]
+    adapter: Option<Adapter>,
 
     /// SPI clock in Hz. Must stay below 1/16 of the target's crystal frequency.
     #[arg(long, global = true, default_value_t = 100_000)]
@@ -122,9 +123,53 @@ fn print_progress(done: usize, total: usize) {
     }
 }
 
+/// Pick the adapter type from the USB IDs of the connected FTDI devices
+/// (0403:6001 = FT232R, 0403:6014 = FT232H).
+fn detect_adapter(serial: Option<&str>) -> Result<Adapter> {
+    let mut first = None;
+    for device in rusb::devices().context("failed to enumerate USB devices")?.iter() {
+        let Ok(desc) = device.device_descriptor() else { continue };
+        if desc.vendor_id() != 0x0403 {
+            continue;
+        }
+        let adapter = match desc.product_id() {
+            0x6001 => Adapter::Ft232r,
+            0x6014 => Adapter::Ft232h,
+            _ => continue,
+        };
+        if let Some(want) = serial {
+            let matches = device
+                .open()
+                .ok()
+                .and_then(|h| h.read_serial_number_string_ascii(&desc).ok())
+                .as_deref()
+                == Some(want);
+            if !matches {
+                continue;
+            }
+        }
+        first.get_or_insert(adapter);
+    }
+    let adapter = first.context(
+        "no supported adapter found (FT232R 0403:6001 or FT232H 0403:6014); check the USB connection, or pass --adapter",
+    )?;
+    eprintln!(
+        "Detected adapter: {}",
+        match adapter {
+            Adapter::Ft232h => "FT232H",
+            Adapter::Ft232r => "FT232R",
+        }
+    );
+    Ok(adapter)
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    match cli.adapter {
+    let adapter = match cli.adapter {
+        Some(a) => a,
+        None => detect_adapter(cli.serial.as_deref())?,
+    };
+    match adapter {
         Adapter::Ft232h => {
             let prog = open_ft232h(cli.serial.as_deref(), cli.clock_hz)?;
             execute(prog, cli.command)

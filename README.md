@@ -4,8 +4,8 @@ A command-line ISP programmer for the Atmel/Microchip **AT89S51** and
 **AT89S52**, driven through a USB-to-serial/SPI adapter:
 
 - **FT232RL / FT232R** (cheap UART bridge boards) — software SPI over
-  bit-bang mode, `--adapter ft232r`
-- **FT232H** — hardware SPI over MPSSE, `--adapter ft232h` (default)
+  bit-bang mode
+- **FT232H** — hardware SPI over MPSSE (**untested on real hardware**)
 
 ## How it works
 
@@ -88,6 +88,8 @@ bit-bang mode.
 
 ### FT232H → AT89S51 (DIP-40)
 
+> Not yet tested on real hardware; only the FT232RL path has been verified.
+
 ![Wiring diagram](docs/wiring.svg)
 
 | FT232H | AT89S51 pin | Function |
@@ -99,6 +101,8 @@ bit-bang mode.
 | GND    | 20          | GND |
 
 ### Target circuit (both adapters)
+
+![Schematic: FT232RL + AT89S52 minimal system](docs/schematic.svg)
 
 The adapter does not drive these; they must already be on the target board:
 
@@ -122,36 +126,38 @@ every time.
 
 ## Usage
 
-Add `--adapter ft232r` to every command when using an FT232RL.
+The adapter (FT232RL or FT232H) is detected automatically from its USB ID.
+Pass `--adapter ft232r` or `--adapter ft232h` only to override it, e.g. when
+both are plugged in.
 
 ```sh
 # Identify the chip (reads the 3 signature bytes)
-cargo run -- --adapter ft232r info
+cargo run -- info
 
 # Erase, write, and verify a HEX file (erase + verify are on by default)
-cargo run -- --adapter ft232r flash firmware.hex
+cargo run -- flash firmware.hex
 
 # Just erase
-cargo run -- --adapter ft232r erase
+cargo run -- erase
 
 # Verify flash contents against a HEX file without writing
-cargo run -- --adapter ft232r verify firmware.hex
+cargo run -- verify firmware.hex
 
 # Select a specific adapter by serial number, and a slower clock
-cargo run -- --adapter ft232r --serial A1B2C3D4 --clock-hz 50000 flash firmware.hex
+cargo run -- --serial A1B2C3D4 --clock-hz 50000 flash firmware.hex
 ```
 
 Diagnostic commands (no flash is touched):
 
 ```sh
 # MOSI jumpered to MISO, no target needed: checks the adapter's SPI timing
-cargo run -- --adapter ft232r selftest
+cargo run -- selftest
 
 # Hold RST high and send Programming Enable every 50 ms, printing replies
-cargo run -- --adapter ft232r probe --seconds 30
+cargo run -- probe --seconds 30
 
 # Hold RST high/low for N seconds, to measure pin 9 with a multimeter
-cargo run -- --adapter ft232r rst high --seconds 20
+cargo run -- rst high --seconds 20
 ```
 
 Set `AT89S51_ISP_TRACE=1` to print the pin states read back when RST changes.
@@ -167,7 +173,7 @@ the target's crystal needs checking.
 active-low (VCC, resistor, LED, P1.0), then:
 
 ```sh
-cargo run -- --adapter ft232r flash examples/blink_p1_0.hex
+cargo run -- flash examples/blink_p1_0.hex
 ```
 
 Verified on a real AT89S52. RST must read low afterwards (R1 to GND) or the
