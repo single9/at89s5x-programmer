@@ -35,6 +35,18 @@ Two hardware requirements that are easy to miss:
   default `--clock-hz 100000` is conservative and safe for any crystal
   ≥ 3.2 MHz; lower it if you're using a slower crystal.
 
+## Comparison with other approaches
+
+| Approach | Adapter firmware | Host software | Notes |
+|----------|------------------|---------------|-------|
+| This project (FT232RL / FT232H) | None | Single Rust binary | Linux, Windows, macOS |
+| Arduino as ISP | Sketch must be flashed first | avrdude or a custom tool | |
+| USBasp-style | Custom firmware | avrdude-compatible | |
+| Parallel port | None | Linux-only tools | Parallel ports are rare on current PCs |
+
+STC 89 series parts are a different case: they are programmed through a
+built-in UART bootloader, not the SPI ISP described here.
+
 ## Installation
 
 ### 1. Build tools and libraries
