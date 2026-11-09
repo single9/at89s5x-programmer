@@ -12,3 +12,8 @@ embedded-hal = "1.0.0"
 ftdi-embedded-hal = { version = "0.24.0", features = ["libftd2xx"] }
 ihex = "3.0.0"
 rusb = "0.9.4"
+
+# On Windows, link the FTDI D2XX library statically so the .exe does not need
+# FTD2XX.dll at startup (the FT232R path does not use D2XX at all).
+[target.'cfg(windows)'.dependencies]
+libftd2xx = { version = "0.33", features = ["static"] }

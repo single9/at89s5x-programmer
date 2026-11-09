@@ -1,0 +1,4 @@
+# Link the C runtime statically on Windows so the .exe does not need the
+# Visual C++ redistributable.
+[target.'cfg(all(windows, target_env = "msvc"))']
+rustflags = ["-C", "target-feature=+crt-static"]
