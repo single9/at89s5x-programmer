@@ -9,8 +9,9 @@ A command-line ISP programmer for the Atmel/Microchip **AT89S51** and
 
 ## How it works
 
-A step-by-step explanation with diagrams (in Traditional Chinese) is in
-[docs/how-it-works.md](docs/how-it-works.md).
+A step-by-step explanation with diagrams is in
+[docs/how-it-works.en.md](docs/how-it-works.en.md)
+([繁體中文](docs/how-it-works.md)).
 
 The AT89S51 (unlike the STC 89 series) does not have a UART bootloader.
 Instead it exposes an SPI-like serial programming interface: `RST`, `SCK`,

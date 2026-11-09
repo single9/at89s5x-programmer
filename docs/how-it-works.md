@@ -1,5 +1,7 @@
 # 運作原理
 
+[English](how-it-works.en.md)
+
 本文說明 `at89s5x-isp` 如何透過 FT232RL (USB 轉 UART 橋接晶片) 對 AT89S51 / AT89S52 的內部 Flash 進行燒錄，涵蓋晶片端的燒錄介面、軟體 SPI 的實作方式、效能考量，以及開發過程中遇到的問題。
 
 ## 1. 概述
