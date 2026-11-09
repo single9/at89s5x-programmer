@@ -151,8 +151,8 @@ FT232H 路徑仍採用 D2XX，且因缺乏實體硬體而未經測試。
 
 ## 7. 限制
 
-- 僅在 FT232RL 搭配 AT89S52 上驗證，平台為 Linux 與 Windows。AT89S51 的邏輯相同，但未以實體晶片測試。
-- macOS 未測試。Windows 需要為轉接器安裝 WinUSB 驅動程式 (Zadig)。
+- 僅在 FT232RL 搭配 AT89S52 上驗證，平台為 Linux、Windows 與 macOS。AT89S51 的邏輯相同，但未以實體晶片測試。
+- Windows 需要為轉接器安裝 WinUSB 驅動程式 (Zadig)。macOS 上系統的 FTDI 驅動程式可能需要 `sudo`。
 - FT232H 路徑未經測試。
 - 未處理鎖定位元 (lock bits)，僅處理 Flash 內容。
 - 其他系列 (AT89LP、AT89S8252 等) 的指令集不盡相同，支援前需先對照資料手冊。

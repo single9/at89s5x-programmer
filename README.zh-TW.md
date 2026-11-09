@@ -63,7 +63,17 @@ FT232R 路徑支援 Windows (已用 FT232RL 驗證)。請從發行頁下載 `.zi
 
 綁定 WinUSB 之後，轉接器不會再顯示為 COM 埠。若要恢復成序列埠，請在裝置管理員中重新安裝 FTDI 的驅動程式。
 
-macOS 尚未驗證；目前支援的平台是 Linux 與 Windows。
+### 5. macOS (FT232R)
+
+FT232R 路徑支援 macOS (已用 FT232RL 驗證)。發行版提供單一的通用二進位檔 (universal binary)，同時支援 Intel 與 Apple Silicon，且已內建 libusb，不需要另外安裝任何東西。
+
+```sh
+tar xzf at89s5x-isp-*-macos-universal.tar.gz && cd at89s5x-isp-*-macos-universal
+xattr -d com.apple.quarantine at89s5x-isp   # 下載的檔案會被隔離
+./at89s5x-isp info
+```
+
+若開啟轉接器時出現存取錯誤，可能是系統的 FTDI 驅動程式佔用了裝置，請改用 `sudo` 執行。
 
 ## 接線
 

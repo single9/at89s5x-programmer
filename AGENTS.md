@@ -73,8 +73,11 @@ is not obvious from the code.
 - Windows: verified by the user with an FT232RL (WinUSB via Zadig). CI builds
   Windows, macOS and Linux (`ci.yml`); the Windows .exe links D2XX and the CRT
   statically (`Cargo.toml`, `.cargo/config.toml`), so it needs no extra DLLs.
-- macOS: compiles in CI, not tested on hardware. libusb cannot auto-detach
-  there, so `open()` ignores `NotSupported` and relies on `claim_interface`.
+- macOS: verified by the user with an FT232RL (universal binary, arm64 + x86_64,
+  ad-hoc signed in CI). libusb is built from source there (`rusb` `vendored`
+  for macOS in `Cargo.toml`); Homebrew's libusb is arm64-only and dynamic.
+  libusb cannot auto-detach on macOS/Windows, so `open()` ignores
+  `NotSupported` and relies on `claim_interface`.
 
 ## Environment gotchas
 

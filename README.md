@@ -90,7 +90,20 @@ The `.exe` has no extra runtime requirements.
 While WinUSB is bound, the adapter no longer appears as a COM port. To use it
 as a serial port again, reinstall FTDI's driver in Device Manager.
 
-macOS is not verified yet; Linux and Windows are the supported platforms.
+### 5. macOS (FT232R)
+
+macOS is supported for the FT232R path (verified with an FT232RL). The release
+contains one universal binary that runs on both Intel and Apple Silicon, with
+libusb built in, so nothing else needs to be installed.
+
+```sh
+tar xzf at89s5x-isp-*-macos-universal.tar.gz && cd at89s5x-isp-*-macos-universal
+xattr -d com.apple.quarantine at89s5x-isp   # the download is quarantined
+./at89s5x-isp info
+```
+
+If opening the adapter fails with an access error, the system's FTDI driver
+may own the device; try running with `sudo`.
 
 ## Wiring
 

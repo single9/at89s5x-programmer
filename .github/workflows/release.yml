@@ -73,8 +73,55 @@ jobs:
             ${{ env.archive }}
             ${{ env.archive }}.sha256
 
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check that the tag matches Cargo.toml
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match Cargo.toml version $version" >&2
+            exit 1
+          fi
+
+      - name: Add targets
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - name: Test
+        run: cargo test --locked
+
+      - name: Build both architectures
+        run: |
+          cargo build --release --locked --target aarch64-apple-darwin
+          cargo build --release --locked --target x86_64-apple-darwin
+
+      - name: Package
+        run: |
+          name="at89s5x-isp-${GITHUB_REF_NAME}-macos-universal"
+          mkdir "$name"
+          lipo -create -output "$name/at89s5x-isp" \
+            target/aarch64-apple-darwin/release/at89s5x-isp \
+            target/x86_64-apple-darwin/release/at89s5x-isp
+          # Apple Silicon refuses unsigned binaries; an ad-hoc signature is enough.
+          codesign --force --sign - "$name/at89s5x-isp"
+          lipo -info "$name/at89s5x-isp"
+          cp README.md README.zh-TW.md LICENSE "$name"/
+          cp -r examples "$name"/
+          tar czf "$name.tar.gz" "$name"
+          shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256"
+          echo "archive=$name.tar.gz" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-universal
+          path: |
+            ${{ env.archive }}
+            ${{ env.archive }}.sha256
+
   publish:
-    needs: build
+    needs: [build, build-macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -88,12 +135,13 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           cat > notes.md <<'NOTES'
-          Prebuilt binaries of `at89s5x-isp` for Linux x86_64 and Windows x86_64.
+          Prebuilt binaries of `at89s5x-isp` for Linux x86_64, Windows x86_64 and macOS (universal: Intel and Apple Silicon).
 
-          - Verified on real hardware: FT232RL (bit-bang) with an AT89S52, on Linux and Windows.
-          - Not verified: AT89S51 on a real chip, the FT232H path, macOS (no prebuilt binary yet).
+          - Verified on real hardware: FT232RL (bit-bang) with an AT89S52, on Linux, Windows and macOS.
+          - Not verified: AT89S51 on a real chip, the FT232H path.
           - Linux: run `scripts/setup-linux.sh` from the repository once for USB permissions.
           - Windows: install the WinUSB driver for the adapter with Zadig first.
+          - macOS: run `xattr -d com.apple.quarantine at89s5x-isp` after downloading.
           - See the README for wiring and usage.
           NOTES
           gh release create "$GITHUB_REF_NAME" dist/* \

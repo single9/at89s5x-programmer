@@ -153,8 +153,8 @@ These commands help with hardware problems and never touch the flash:
 
 ## 7. Limitations
 
-- Verified only on an FT232RL with an AT89S52, on Linux and Windows. The AT89S51 logic is identical but has not been tested on a real chip.
-- macOS is untested. Windows needs the WinUSB driver (Zadig) for the adapter.
+- Verified only on an FT232RL with an AT89S52, on Linux, Windows and macOS. The AT89S51 logic is identical but has not been tested on a real chip.
+- Windows needs the WinUSB driver (Zadig) for the adapter. On macOS the system FTDI driver may require `sudo`.
 - The FT232H path is untested.
 - Lock bits are not handled, only flash contents.
 - Other families (AT89LP, AT89S8252 and so on) use different instruction sets; check the datasheet before assuming support.
