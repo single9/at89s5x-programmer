@@ -25,3 +25,36 @@ jobs:
         run: cargo clippy --locked -- -D warnings
       - name: Test
         run: cargo test --locked
+
+  # Compile on every platform and keep the binaries so they can be tried on
+  # real hardware. Only Linux has been verified with an adapter so far.
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            bin: at89s5x-isp
+          - os: windows-latest
+            bin: at89s5x-isp.exe
+          - os: macos-latest
+            bin: at89s5x-isp
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install libusb (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libusb-1.0-0-dev
+      - name: Install libusb (macOS)
+        if: runner.os == 'macOS'
+        run: brew install libusb pkgconf
+      - name: Test
+        run: cargo test --locked
+      - name: Build
+        run: cargo build --release --locked
+      - uses: actions/upload-artifact@v4
+        with:
+          name: at89s5x-isp-${{ matrix.os }}
+          path: target/release/${{ matrix.bin }}

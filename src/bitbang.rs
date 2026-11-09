@@ -30,6 +30,15 @@ const MISO: u8 = 1 << 2;
 const RST: u8 = 1 << 3;
 const OUTPUT_MASK: u8 = SCK | MOSI | RST;
 
+/// What to check when the adapter cannot be opened or claimed.
+const PLATFORM_HINT: &str = if cfg!(target_os = "windows") {
+    "Windows: bind the WinUSB driver to the adapter with Zadig; see the README"
+} else if cfg!(target_os = "macos") {
+    "macOS: the system FTDI driver may own the device; try sudo or unload it, see the README"
+} else {
+    "Linux: USB permissions? run scripts/setup-linux.sh, see the README"
+};
+
 const FTDI_VID: u16 = 0x0403;
 const FT232R_PID: u16 = 0x6001;
 const EP_OUT: u8 = 0x02;
@@ -272,9 +281,7 @@ pub fn open(serial: Option<&str>, clock_hz: u32) -> Result<(BitbangSpi, BitbangR
         let handle = match device.open() {
             Ok(h) => h,
             Err(e) => {
-                eprintln!(
-                    "warning: found an FT232R but could not open it: {e} (USB permissions? see README)"
-                );
+                eprintln!("warning: found an FT232R but could not open it: {e} ({PLATFORM_HINT})");
                 continue;
             }
         };
@@ -292,10 +299,22 @@ pub fn open(serial: Option<&str>, clock_hz: u32) -> Result<(BitbangSpi, BitbangR
     }
     let dev = found.context("no FT232R (0403:6001) found or accessible")?;
 
-    dev.set_auto_detach_kernel_driver(true)
-        .context("failed to enable automatic kernel-driver detach")?;
-    dev.claim_interface(0)
-        .context("failed to claim USB interface (is another program using it?)")?;
+    // Linux can detach `ftdi_sio` automatically. Windows and macOS report
+    // "not supported"; that is fine, claiming the interface below decides
+    // whether the device is usable.
+    match dev.set_auto_detach_kernel_driver(true) {
+        Ok(()) | Err(rusb::Error::NotSupported) => {}
+        Err(e) => {
+            return Err(
+                anyhow::Error::new(e).context("failed to enable automatic kernel-driver detach")
+            );
+        }
+    }
+    dev.claim_interface(0).with_context(|| {
+        format!(
+            "failed to claim the USB interface (is another program using it?) ({PLATFORM_HINT})"
+        )
+    })?;
 
     let mut inner = Inner { dev, out: 0 };
     inner.control(REQ_RESET, 0, 1)?; // reset
