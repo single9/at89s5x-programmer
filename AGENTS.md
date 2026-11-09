@@ -81,6 +81,13 @@ is not obvious from the code.
   The release binary is not notarized: a browser-downloaded copy is blocked
   until `xattr -d com.apple.quarantine` is run (verified by the user).
 
+## Releasing
+
+See `RELEASING.md`. Short version: `scripts/release.sh X.Y.Z` bumps the
+version, checks, tags and pushes; CI (`release.yml`) builds Linux, Windows and
+macOS binaries and publishes the release. Never publish without the user's
+confirmation, and never reuse a published version number.
+
 ## Environment gotchas
 
 - No TTY for `sudo` in agent shells: anything needing root must be run by
