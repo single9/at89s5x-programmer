@@ -1,168 +1,170 @@
-# 運作原理
+# How It Works
 
-[English](how-it-works.en.md)
+[繁體中文](how-it-works.zh-TW.md)
 
-本文說明 `at89s5x-isp` 如何透過 FT232RL (USB 轉 UART 橋接晶片) 對 AT89S51 / AT89S52 的內部 Flash 進行燒錄，涵蓋晶片端的燒錄介面、軟體 SPI 的實作方式、效能考量，以及開發過程中遇到的問題。
+This document explains how `at89s5x-isp` programs the internal flash of an AT89S51 / AT89S52 through an FT232RL (a USB-to-UART bridge chip): the chip's programming interface, how SPI is implemented in software, performance considerations, and the problems met during development.
 
-## 1. 概述
+No prior knowledge of SPI or the 8051 is required.
 
-![系統架構](img/architecture.svg)
+## 1. Overview
 
-- AT89S51 / S52 不具備 UART 啟動載入程式 (bootloader)，無法像部分 STC 型號一樣經由序列埠燒錄。
-- 這兩款晶片提供專用的 **ISP (In-System Programming)** 介面，透過 4 條訊號線進行 SPI 式通訊：`SCK` (時脈)、`MOSI` (主機送出)、`MISO` (晶片回覆)、`RST` (切換至燒錄模式)。
-- 本工具分為兩層：`isp.rs` 負責產生燒錄指令，`bitbang.rs` 負責將指令轉換為接腳上的電位變化。
+![System architecture](img/architecture.svg)
 
-## 2. 晶片端的燒錄介面
+- The AT89S51 / S52 has no UART bootloader, so it cannot be programmed over a serial port the way some STC parts can.
+- Both chips provide a dedicated **ISP (In-System Programming)** interface: SPI-style communication over four signal lines: `SCK` (clock), `MOSI` (host to chip), `MISO` (chip to host) and `RST` (selects programming mode).
+- The tool has two layers: `isp.rs` produces the programming commands, and `bitbang.rs` turns them into pin-level changes.
 
-### 2.1 進入燒錄模式
+## 2. The Chip's Programming Interface
 
-AT89S 系列的 RST 為**高電位有效**。進入與離開燒錄模式的程序如下：
+### 2.1 Entering and Leaving Programming Mode
 
-1. 將 RST 拉高，晶片停止執行程式並開始接收 SPI 指令。
-2. 等待約 10 ms 使內部電路穩定 (本工具等待 20 ms)。
-3. 送出燒錄指令。
-4. 完成後將 RST 拉低，晶片由頭開始執行已寫入的程式。
+On the AT89S series, RST is **active high**. The sequence is:
 
-目標板上需設置 **R1 (10 kΩ，RST 對地)**，使轉接器釋放腳位後 RST 回到低電位，程式方能正常執行。
+1. Drive RST high. The chip stops running its program and starts accepting SPI commands.
+2. Wait about 10 ms for the chip to settle (the tool waits 20 ms).
+3. Send the programming commands.
+4. Drive RST low. The chip restarts and runs the program that was just written.
 
-### 2.2 SPI 時序
+The target board needs **R1 (10 kΩ, RST to GND)** so that RST returns to a low level once the adapter releases the pin; otherwise the program does not run.
 
-![SPI 時序](img/spi-timing.svg)
+### 2.2 SPI Timing
 
-- **SCK** 為時脈。每個 SCK 上升緣，目標晶片取樣一次 MOSI。
-- **MOSI** 為主機送出的資料，每個時脈一個位元，高位元優先 (MSB first)。
-- **MISO** 為晶片回覆的資料，與 MOSI 同步進行。每送出一個位元組，同時收回一個位元組。
+![SPI timing](img/spi-timing.svg)
 
-SCK 頻率須低於晶片時脈頻率的 1/16。以 12 MHz 晶體振盪器為例，上限為 750 kHz；本工具預設為 100 kHz，保留充足餘裕。
+- **SCK** is the clock. On each rising edge the target samples MOSI once.
+- **MOSI** carries the data sent by the host, one bit per clock, most significant bit first.
+- **MISO** carries the chip's reply, simultaneously with MOSI. Every byte sent also receives one byte back.
 
-### 2.3 指令集
+SCK must stay below 1/16 of the chip's clock frequency. With a 12 MHz crystal the limit is 750 kHz; the tool defaults to 100 kHz, which leaves a wide margin.
 
-每個指令固定為 4 個位元組，完整定義見 AT89S51 / AT89S52 資料手冊的 Serial Programming Instruction Set。
+### 2.3 Instruction Set
 
-| 動作 | 送出的 4 個位元組 | 回覆 |
-|------|------------------|------|
-| 進入燒錄模式 (Programming Enable) | `AC 53 00 00` | 第 4 個位元組為 `69` |
-| 讀取簽名 (Read Signature Byte) | `28 索引 00 00` (索引為 0、1、2) | 第 4 個位元組為簽名資料 |
-| 整顆抹除 (Chip Erase) | `AC 80 00 00` | 之後等待 500 ms |
-| 讀取一個位元組 | `20 位址高 位址低 00` | 第 4 個位元組為資料 |
-| 寫入一個位元組 | `40 位址高 位址低 資料` | 之後等待寫入完成 |
+Every instruction is exactly 4 bytes. The full definition is in the Serial Programming Instruction Set section of the AT89S51 / AT89S52 datasheets.
 
-簽名用於辨識晶片型號：`1E 51 06` 為 AT89S51，`1E 52 06` 為 AT89S52。本工具依簽名決定 Flash 容量 (4 KB / 8 KB)。
+| Action | The 4 bytes sent | Reply |
+|--------|------------------|-------|
+| Programming Enable | `AC 53 00 00` | `69` in byte 4 |
+| Read Signature Byte | `28 index 00 00` (index 0, 1, 2) | signature byte in byte 4 |
+| Chip Erase | `AC 80 00 00` | wait 500 ms afterwards |
+| Read a byte | `20 addr-high addr-low 00` | data in byte 4 |
+| Write a byte | `40 addr-high addr-low data` | wait for the write to finish |
 
-### 2.4 `flash` 指令的執行流程
+The signature identifies the chip: `1E 51 06` is an AT89S51 and `1E 52 06` an AT89S52. The tool uses it to choose the flash size (4 KB / 8 KB).
 
-![執行流程](img/flow.svg)
+### 2.4 What `flash` Does
 
-實作上的幾項設計：
+![Flow of the flash command](img/flow.svg)
 
-- **僅寫入非 `FF` 的位元組。** 抹除後 Flash 內容皆為 `FF`，因此 HEX 檔中的空白區域不需寫入。
-- **驗證採讀回比對。** 發現任何差異即中止，並回報差異所在的位址。
-- **驗證範圍僅限已寫入的區域。** 在本工具自行抹除之後，最後一筆資料之後的位址必為空白，故不需讀取。
+Implementation notes:
 
-## 3. FT232RL 的軟體 SPI
+- **Only non-`FF` bytes are written.** Erased flash reads `FF`, so blank areas of the HEX file need no writes.
+- **Verification reads the flash back and compares.** The first difference aborts the run and reports its address.
+- **Only the written range is verified.** After the tool's own chip erase, everything past the last data byte is blank, so it does not need to be read.
 
-FT232H 等較高階的晶片內建硬體 SPI (MPSSE)。FT232RL 沒有此功能，本工具改用其**同步 bit-bang 模式**，將 UART 相關接腳當作一般 GPIO，由軟體逐步產生時脈。
+## 3. Software SPI on the FT232RL
 
-![bit-bang 取樣](img/bitbang.svg)
+Higher-end chips such as the FT232H have hardware SPI (MPSSE). The FT232RL does not, so the tool uses its **synchronous bit-bang mode**, which turns the UART pins into plain GPIO that software toggles step by step to generate the clock.
 
-在此模式下：
+![Bit-bang sampling](img/bitbang.svg)
 
-- 主機送給晶片的每個位元組，代表**某一時間點各接腳應有的電位**，而非傳輸資料。
-- 晶片每收到一個位元組便依其設定接腳，並將**當下所有接腳的實際電位**讀回主機。
+In this mode:
 
-接腳對應如下：
+- Each byte the host sends is **the desired state of all pins at one instant**, not data.
+- For every byte received, the chip sets the pins accordingly and sends back **the actual state of all pins at that moment**.
 
-| 接腳 | 位元 | 用途 |
-|------|------|------|
-| TXD | D0 | SCK (輸出) |
-| RXD | D1 | MOSI (輸出) |
-| RTS# | D2 | MISO (輸入) |
-| CTS# | D3 | RST (輸出) |
+Pin assignment:
 
-### 3.1 位元的產生
+| Pin | Bit | Role |
+|-----|-----|------|
+| TXD | D0 | SCK (output) |
+| RXD | D1 | MOSI (output) |
+| RTS# | D2 | MISO (input) |
+| CTS# | D3 | RST (output) |
 
-每個 SPI 位元由 2 個取樣組成：
+### 3.1 Producing a Bit
 
-1. 設定 MOSI 為欲送出的位元值，SCK 為低 (例如送出位元 `1` 時為 `0x0A`)。
-2. 保持 MOSI，將 SCK 拉高 (`0x0B`)。
+Each SPI bit takes two samples:
 
-因此一個位元組需 16 個取樣。
+1. Set MOSI to the bit value with SCK low (for example `0x0A` when sending a `1`).
+2. Keep MOSI and raise SCK (`0x0B`).
 
-### 3.2 MISO 的取樣時機
+A byte therefore takes 16 samples.
 
-讀回的資料比送出的資料**延遲一個取樣**。因此 SCK 拉高那一格的 MISO，需由**下一格的讀回值**取得。這也是每次傳輸結尾多送一個取樣的原因。
+### 3.2 When to Sample MISO
 
-### 3.3 速度設定
+The readback **lags the output by one sample**. MISO for the sample where SCK went high must therefore be taken from the **next readback entry**. This is also why every transfer ends with one extra sample.
 
-同步模式下，取樣速率為「鮑率 × 16」，而每個 SPI 位元需 2 個取樣，因此：
+### 3.3 Setting the Speed
+
+In synchronous mode the sample rate is "baud x 16", and each SPI bit needs two samples, so:
 
 ```
-鮑率 = SCK 頻率 ÷ 8
+baud = SCK frequency / 8
 ```
 
-例如 SCK 為 100 kHz 時，鮑率設為 12500。
+For example, a 100 kHz SCK needs a baud rate of 12500.
 
-### 3.4 驗證方式
+### 3.4 Verification
 
-將 `MOSI` 與 `MISO` 以導線短路，執行 `at89s5x-isp selftest`。送出的位元組應原樣收回，據此可確認時序、取樣時機與鮑率設定皆正確。此測試不需連接目標晶片。
+Connect `MOSI` to `MISO` with a wire and run `at89s5x-isp selftest`. The bytes sent must come back unchanged, which confirms the timing, the sampling position and the baud setting. No target chip is needed for this test.
 
-## 4. 以 libusb 取代廠商函式庫
+## 4. libusb Instead of the Vendor Library
 
-初版採用 FTDI 官方的 D2XX 函式庫，但在 Linux 上出現 `DEVICE_NOT_FOUND`：系統的 `ftdi_sio` 驅動程式已先行佔用轉接器，D2XX 無法存取。解決方式需每次插拔後以 `rmmod` 卸載驅動程式，操作繁瑣。
+The first version used FTDI's D2XX library, but on Linux it failed with `DEVICE_NOT_FOUND`: the system's `ftdi_sio` driver had already claimed the adapter, so D2XX could not reach it. Working around that meant unloading the driver with `rmmod` after every plug-in.
 
-目前 FT232R 路徑改為直接使用 libusb，可在執行期間暫時分離 `ftdi_sio` 並於結束時歸還，無須卸載驅動程式，`/dev/ttyUSB*` 平時仍可正常使用。
+The FT232R path now uses libusb directly. It detaches `ftdi_sio` for the duration of the run and hands it back afterwards, so no `rmmod` is needed and `/dev/ttyUSB*` keeps working the rest of the time.
 
-FT232H 路徑仍採用 D2XX，且因缺乏實體硬體而未經測試。
+The FT232H path still uses D2XX and is untested for lack of hardware.
 
-## 5. 效能
+## 5. Performance
 
-初版驗證 8 KB 需 23.6 秒，原因是每個位元組都需經過一次完整的 USB 往返，每次耗時數毫秒。採取兩項改善：
+The first version needed 23.6 s to verify 8 KB, because every byte made a full USB round trip costing several milliseconds. Two changes helped:
 
-1. **批次傳輸**：一次送出 240 個取樣後再統一讀回。FT232R 的讀回緩衝區為 256 位元組，批次不宜超過此值，否則傳輸會停滯。
-2. **合併讀取指令**：驗證時將 32 個讀取指令合併為單一 SPI 傳輸。
+1. **Batched transfers:** 240 samples are sent before the readback is collected. The FT232R holds 256 bytes of readback, so a batch must not exceed that, or the transfer stalls.
+2. **Combined read commands:** verification packs 32 read instructions into one SPI transfer.
 
-量測結果 (驗證 8 KB)：
+Measured results (verifying 8 KB):
 
-| 條件 | 時間 |
-|------|------|
-| 改善前 | 23.6 秒 |
-| 批次傳輸，SCK 100 kHz | 11.7 秒 |
-| 批次傳輸，`--clock-hz 700000` (12 MHz 晶體振盪器的實用上限) | 2.4 秒 |
+| Condition | Time |
+|-----------|------|
+| Before | 23.6 s |
+| Batched, SCK 100 kHz | 11.7 s |
+| Batched, `--clock-hz 700000` (practical limit for a 12 MHz crystal) | 2.4 s |
 
-耗時大致與 SCK 頻率成反比。`flash` 僅讀回已寫入的範圍，一般的小型程式可在 1 秒內完成。
+The time is roughly inversely proportional to the SCK frequency. `flash` only reads back the range it wrote, so a small program finishes in under a second.
 
-## 6. 已知問題與排除
+## 6. Known Problems and Fixes
 
-| 現象 | 原因與處理 |
-|------|-----------|
-| Programming Enable 一律失敗，檢查項目為 `0x53` | 初版沿用 AVR 的判斷方式。AT89S 系列的回覆為**第 4 個位元組的 `0x69`**，已修正 |
-| 簽名讀取結果錯誤 | 讀取簽名時，索引 (0、1、2) 須置於位址的**高位元組**，已修正 |
-| `DEVICE_NOT_FOUND` | `ftdi_sio` 驅動程式佔用裝置，改用 libusb (見第 4 節) |
-| `selftest` 通過，但接上晶片後回覆恆為 `FF FF FF FF` | 問題位於目標板，並非軟體。`selftest` 已證明轉接器端的時序正確。最終僅重新製作目標板的最小系統 (電源、晶體振盪器、重置電路)，轉接器接線未更動，問題即排除 |
-| 接上晶片後回覆不斷變動 | 表示 MISO 有被晶片驅動，但晶片基本運作不穩定 (例如時脈)，導致位元錯位 |
+| Symptom | Cause and fix |
+|---------|---------------|
+| Programming Enable always failed, checking for `0x53` | The first version used the AVR convention. The AT89S series answers with **`0x69` in byte 4**. Fixed |
+| Wrong signature | When reading the signature, the index (0, 1, 2) goes in the **high address byte**. Fixed |
+| `DEVICE_NOT_FOUND` | The `ftdi_sio` driver had claimed the device. Switched to libusb (see section 4) |
+| `selftest` passes, but with the chip attached every reply is `FF FF FF FF` | The fault was on the target board, not in the software; `selftest` had already shown that the adapter side is correct. Rebuilding only the target's minimal system (power, crystal, reset circuit) fixed it; the adapter wiring was not changed |
+| Replies keep changing with the chip attached | MISO is being driven by the chip, but its basic operation is unstable (for example the clock), so the bits are misaligned |
 
-### 診斷指令
+### Diagnostic Commands
 
-下列指令用於排查硬體問題，不會更動 Flash：
+These commands help with hardware problems and never touch the flash:
 
-- `selftest`：不接目標晶片，將 MOSI 與 MISO 短路以測試轉接器。
-- `probe`：持續送出 Programming Enable，僅在回覆改變時輸出，便於邊觀察邊調整接線。
-- `rst high|low`：將 RST 固定於指定電位，以便使用三用電表量測 pin 9。
+- `selftest`: with no target, short MOSI to MISO to test the adapter.
+- `probe`: send Programming Enable continuously and print the reply only when it changes, so the wiring can be adjusted while watching.
+- `rst high|low`: hold RST at a fixed level so pin 9 can be measured with a multimeter.
 
-## 7. 限制
+## 7. Limitations
 
-- 僅在 FT232RL 搭配 AT89S52 上驗證。AT89S51 的邏輯相同，但未以實體晶片測試。
-- FT232H 路徑未經測試。
-- 未處理鎖定位元 (lock bits)，僅處理 Flash 內容。
-- 其他系列 (AT89LP、AT89S8252 等) 的指令集不盡相同，支援前需先對照資料手冊。
+- Verified only on an FT232RL with an AT89S52. The AT89S51 logic is identical but has not been tested on a real chip.
+- The FT232H path is untested.
+- Lock bits are not handled, only flash contents.
+- Other families (AT89LP, AT89S8252 and so on) use different instruction sets; check the datasheet before assuming support.
 
-## 8. 原始碼對照
+## 8. Source Map
 
-| 檔案 | 內容 |
-|------|------|
-| `src/isp.rs` | 燒錄協定：指令、延遲、簽名辨識 |
-| `src/bitbang.rs` | FT232RL 軟體 SPI：將 SPI 位元轉換為接腳電位 |
-| `src/main.rs` | 命令列介面與輸出格式 |
-| `src/hexfile.rs` | Intel HEX 檔解析 |
+| File | Contents |
+|------|----------|
+| `src/isp.rs` | Programming protocol: instructions, delays, signature detection |
+| `src/bitbang.rs` | FT232RL software SPI: turns SPI bits into pin states |
+| `src/main.rs` | Command-line interface and output format |
+| `src/hexfile.rs` | Intel HEX parsing |
 
-接線與安裝說明請參閱 [README](../README.md)。
+For wiring and installation see the [README](../README.md).
