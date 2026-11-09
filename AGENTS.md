@@ -59,7 +59,8 @@ is not obvious from the code.
   timing, MISO sampling lag and baud divisor encoding are correct.
 - Verified on a real AT89S52 (2026-11-09): `info` reads `1E 52 06`, `flash`
   (erase, write, verify) and `verify` pass. Earlier `FF FF FF FF` / unstable
-  replies came from the target side (crystal/wiring), not the software. Blank
+  replies came from the target's minimal system (rebuilt by the user; the
+  adapter wiring was unchanged), not the software. Blank
   0xFF bytes are skipped on write; progress prints every 256 bytes.
 - Not yet tried on a real AT89S51.
 - **FT232H (MPSSE/D2XX) path is untested on real hardware** (no adapter
