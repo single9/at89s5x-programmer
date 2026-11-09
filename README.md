@@ -1,5 +1,7 @@
 # at89s5x-isp
 
+[繁體中文](README.zh-TW.md)
+
 A command-line ISP programmer for the Atmel/Microchip **AT89S51** and
 **AT89S52**, driven through a USB-to-serial/SPI adapter:
 
@@ -107,6 +109,9 @@ The adapter does not drive these; they must already be on the target board:
 - A crystal (e.g. 11.0592 MHz) with two ~22 pF load caps on `XTAL1`/`XTAL2`
   (pins 19/18), running
 - A decoupling cap across `VCC`/`GND`
+- **C6: a 10 µF capacitor from VCC to RST** (with R1 it forms a power-on reset),
+  needed when the target runs on its own without the programmer attached.
+  It is optional while programming, because the adapter overrides it.
 - **R1: a 10 kΩ resistor from RST to GND**, so RST has a defined level
   whenever the adapter isn't actively driving it (before the programmer
   opens the device, or if it's unplugged). Without it RST would float and
@@ -163,9 +168,16 @@ cargo run -- rst high --seconds 20
 
 Set `AT89S5X_ISP_TRACE=1` to print the pin states read back when RST changes.
 
-A good first check is `info`: it should print `Signature: 1E 51 06 (AT89S51)`
-or `1E 52 06 (AT89S52)`. `Programming Enable failed` means wiring, power, or
-the target's crystal needs checking.
+A good first check is `info`. It should print the adapter and a device line
+such as:
+
+```
+Adapter   FT232R (bit-bang), SCK 100 kHz
+Device    AT89S52  signature 1E 52 06  8 KB flash
+```
+
+`target did not answer Programming Enable` means the wiring, power, or the
+target's crystal needs checking (see Troubleshooting).
 
 ## Example
 
@@ -182,14 +194,14 @@ program will not run.
 
 ## Troubleshooting
 
-`Programming Enable failed` with reply `FF FF FF FF`, or replies that keep
-changing, means the target is not synchronising:
+`target did not answer Programming Enable` with reply `FF FF FF FF`, or
+replies that keep changing, means the target is not synchronising:
 
 1. Run `selftest` with MOSI jumpered to MISO. If it passes, the adapter is fine.
 2. Check the target crystal really oscillates (XTAL2, pin 18, about 2 V; 0 V or
    5 V means it is not running) and has a 22–30 pF cap from each crystal pin to GND.
 3. Check VCC/GND decoupling (0.1 µF), EA/VPP (pin 31) at VCC, and keep wires short.
-4. Remove other loads from P1.5–P1.7 (LEDs, buttons) and RST (RC reset circuit).
+4. Remove other loads from P1.5–P1.7 (LEDs, buttons) and, as a test, C6 on RST.
 5. Try a slower clock, e.g. `--clock-hz 5000`.
 
 A 12 MHz crystal is fine: SCK only has to stay below crystal / 16 (750 kHz).
@@ -197,7 +209,6 @@ A 12 MHz crystal is fine: SCK only has to stay below crystal / 16 (750 kHz).
 ## Notes / limitations
 
 - Blank (`0xFF`) bytes are skipped when writing, since erased flash is already `0xFF`.
-
 - The chip is auto-detected from its signature bytes (AT89S51 = `1E 51 06`,
   AT89S52 = `1E 52 06`) and the flash size (4 KB / 8 KB) is chosen to match.
   An unrecognised signature falls back to 4 KB with a warning.

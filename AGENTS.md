@@ -15,6 +15,7 @@ is not obvious from the code.
 | `src/hexfile.rs` | Intel HEX loader |
 | `scripts/setup-linux.sh` | One-time udev rule + `plugdev` + libusb check |
 | `docs/datasheet/` | **Not in git** (gitignored, vendor copyright). Optional local copies of the AT89S51 / S52 datasheets; download from Microchip's product pages |
+| `README.zh-TW.md` | Traditional Chinese translation of `README.md`; keep the two in sync |
 | `docs/how-it-works.md` | Explanation of the design (English is primary; `how-it-works.zh-TW.md` is the Traditional Chinese translation, diagrams in `docs/img/` and `docs/img/zh-TW/`) |
 | `docs/wiring.svg` | Wiring diagram for both adapters (same wiring, different pin names) |
 | `docs/schematic.svg` | KiCad schematic (programmer + minimal system + P1.0 LED, power-on reset); source not kept |
