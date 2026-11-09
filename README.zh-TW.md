@@ -27,8 +27,6 @@ AT89S51 與 STC 89 系列不同，沒有 UART 啟動載入程式 (bootloader)，
 | USBasp 類 | 自訂韌體 | 相容 avrdude | |
 | 並列埠 | 不需要 | 僅限 Linux 的工具 | 現今電腦多半沒有並列埠 |
 
-STC 89 系列則不同：它們透過內建的 UART 啟動載入程式燒錄，而非此處的 SPI ISP。
-
 ## 安裝
 
 ### 1. 編譯工具與函式庫
@@ -45,7 +43,7 @@ git clone https://github.com/single9/at89s5x-programmer.git && cd at89s5x-progra
 cargo build --release          # 執行檔：target/release/at89s5x-isp
 ```
 
-### 3. Linux 的 USB 權限 (FT232R，每台電腦設定一次)
+### 3. Linux USB 權限
 
 FT232R 後端使用 libusb。程式執行期間會自動分離核心的 `ftdi_sio` 驅動程式，結束後再歸還，因此**不需要** `rmmod`，`/dev/ttyUSB*` 平時也能照常使用。只需要取得開啟 USB 裝置的權限：
 
@@ -65,7 +63,7 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 
 此規則為永久設定；其他電腦需各自做一次相同的設定。
 
-### 4. Windows (FT232R)
+### 4. Windows
 
 FT232R 路徑支援 Windows (已用 FT232RL 驗證)。請從發行頁下載 `.zip`，或以 MSVC 工具鏈自行編譯。`.exe` 不需要額外的執行環境。
 
@@ -74,7 +72,7 @@ FT232R 路徑支援 Windows (已用 FT232RL 驗證)。請從發行頁下載 `.zi
 
 綁定 WinUSB 之後，轉接器不會再顯示為 COM 埠。若要恢復成序列埠，請在裝置管理員中重新安裝 FTDI 的驅動程式。
 
-### 5. macOS (FT232R)
+### 5. macOS
 
 FT232R 路徑支援 macOS (已用 FT232RL 驗證)。發行版提供單一的通用二進位檔 (universal binary)，同時支援 Intel 與 Apple Silicon，且已內建 libusb，不需要另外安裝任何東西。
 
@@ -106,7 +104,7 @@ xattr -d com.apple.quarantine at89s5x-isp   # 只需執行一次，說明見下�
 
 請將模組的 VCCIO 或跳線設定為目標板的供電電壓 (3.3 V 或 5 V)，使邏輯準位一致。仿冒的 FT232RL 晶片在 bit-bang 模式下可能無法正常運作。FT232H 路徑尚未在實體硬體上測試，僅 FT232RL 路徑已驗證。
 
-### 目標板電路 (兩種轉接器皆適用)
+### 目標板電路
 
 ![電路圖：FT232RL 與 AT89S52 最小系統](docs/schematic.svg)
 

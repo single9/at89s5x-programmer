@@ -44,9 +44,6 @@ Two hardware requirements that are easy to miss:
 | USBasp-style | Custom firmware | avrdude-compatible | |
 | Parallel port | None | Linux-only tools | Parallel ports are rare on current PCs |
 
-STC 89 series parts are a different case: they are programmed through a
-built-in UART bootloader, not the SPI ISP described here.
-
 ## Installation
 
 ### 1. Build tools and libraries
@@ -63,7 +60,7 @@ git clone https://github.com/single9/at89s5x-programmer.git && cd at89s5x-progra
 cargo build --release          # binary: target/release/at89s5x-isp
 ```
 
-### 3. Linux USB permissions (FT232R, one time per computer)
+### 3. Linux USB permissions
 
 The FT232R backend uses libusb. It detaches the kernel's `ftdi_sio` driver
 automatically while the tool runs and hands it back afterwards, so you do
@@ -88,7 +85,7 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 
 The rule is permanent; other computers need the same one-time setup.
 
-### 4. Windows (FT232R)
+### 4. Windows
 
 Windows is supported for the FT232R path (verified with an FT232RL). Use the
 `.zip` from the releases page, or build from source with the MSVC toolchain.
@@ -102,7 +99,7 @@ The `.exe` has no extra runtime requirements.
 While WinUSB is bound, the adapter no longer appears as a COM port. To use it
 as a serial port again, reinstall FTDI's driver in Device Manager.
 
-### 5. macOS (FT232R)
+### 5. macOS
 
 macOS is supported for the FT232R path (verified with an FT232RL). The release
 contains one universal binary that runs on both Intel and Apple Silicon, with
@@ -142,7 +139,7 @@ so the logic levels match. Counterfeit FT232RL chips may misbehave in
 bit-bang mode. The FT232H path has not been tested on real hardware; only
 the FT232RL path has been verified.
 
-### Target circuit (both adapters)
+### Target circuit
 
 ![Schematic: FT232RL + AT89S52 minimal system](docs/schematic.svg)
 
