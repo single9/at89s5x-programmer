@@ -1,21 +1,13 @@
 #!/usr/bin/env bash
 # One-time Linux setup for the FT232R (FT232RL) backend.
-# Installs a udev rule so non-root users in "plugdev" can open the USB device,
-# and checks the build prerequisites. Safe to re-run.
+# Installs a udev rule so non-root users in "plugdev" can open the USB device.
+# Safe to re-run.
 set -euo pipefail
 
 RULE_FILE=/etc/udev/rules.d/99-ft232r.rules
 RULE='SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6001", GROUP="plugdev", MODE="0660"'
 
 if [ "$(id -u)" -eq 0 ]; then SUDO=""; else SUDO="sudo"; fi
-
-echo "==> libusb development files"
-if pkg-config --exists libusb-1.0 2>/dev/null; then
-  echo "    found libusb-1.0 $(pkg-config --modversion libusb-1.0)"
-else
-  echo "    MISSING. Install it first, e.g.: sudo apt install libusb-1.0-0-dev pkg-config" >&2
-  exit 1
-fi
 
 echo "==> plugdev group"
 if getent group plugdev >/dev/null; then
@@ -42,4 +34,4 @@ fi
 
 echo
 echo "Done. Unplug and re-plug the FT232RL, then try:"
-echo "  cargo run -- --adapter ft232r info"
+echo "  at89s5x-isp info"

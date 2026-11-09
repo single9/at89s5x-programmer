@@ -19,8 +19,7 @@ The AT89S51/S52 are programmed through an SPI-like serial interface: `RST`,
 `SCK`, `MOSI`, `MISO`. Programming is done by holding `RST` high and clocking a
 fixed instruction set (Programming Enable, Chip Erase, Read/Write Program
 Memory, Read Signature Byte) into the part — see `src/isp.rs` for the exact
-byte sequences, taken from the Microchip datasheets (not included in this
-repository) for the
+byte sequences, taken from the Microchip datasheets for the
 [AT89S51](https://www.microchip.com/en-us/product/AT89S51) and
 [AT89S52](https://www.microchip.com/en-us/product/AT89S52) ("Serial Programming
 Instruction Set").
@@ -38,12 +37,17 @@ Two hardware requirements that are easy to miss:
 
 | Approach | Adapter firmware | Host software | Notes |
 |----------|------------------|---------------|-------|
-| This project (FT232RL / FT232H) | None | Single Rust binary | Linux, Windows, macOS |
+| This project | None | Single Rust binary | Linux, Windows, macOS |
 | Arduino as ISP | Sketch must be flashed first | avrdude or a custom tool | |
 | USBasp-style | Custom firmware | avrdude-compatible | |
-| Parallel port | None | Linux-only tools | Parallel ports are rare on current PCs |
+| Parallel port | None | Linux-only tools | Requires a parallel port |
 
 ## Installation
+
+Prebuilt binaries for Linux (x86_64), Windows (x86_64) and macOS (universal)
+are on the [releases page](https://github.com/single9/at89s5x-programmer/releases/latest).
+After downloading, continue at step 3 (Linux), 4 (Windows) or 5 (macOS). To
+build from source or use `cargo install`, start at step 1.
 
 ### 1. Build tools and libraries
 
@@ -59,22 +63,29 @@ git clone https://github.com/single9/at89s5x-programmer.git && cd at89s5x-progra
 cargo build --release          # binary: target/release/at89s5x-isp
 ```
 
+Or install directly from GitHub into `~/.cargo/bin`:
+
+```sh
+cargo install --git https://github.com/single9/at89s5x-programmer
+```
+
 ### 3. Linux USB permissions
 
 The FT232R backend uses libusb. It detaches the kernel's `ftdi_sio` driver
 automatically while the tool runs and hands it back afterwards, so you do
 **not** need `rmmod`, and `/dev/ttyUSB*` keeps working the rest of the time.
-It only needs permission to open the USB device:
+It only needs permission to open the USB device. From a clone of the
+repository, run:
 
 ```sh
 ./scripts/setup-linux.sh
 ```
 
-The script checks for libusb, adds your user to the `plugdev` group, and
+The script adds your user to the `plugdev` group, and
 installs a udev rule. Then **unplug and re-plug the adapter** (and log out
 and back in if you were just added to `plugdev`). It is safe to re-run.
 
-Manual equivalent:
+Manual equivalent, for a downloaded binary without the repository:
 
 ```sh
 echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6001", GROUP="plugdev", MODE="0660"' \

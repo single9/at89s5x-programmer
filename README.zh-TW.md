@@ -11,7 +11,7 @@ Atmel / Microchip **AT89S51** 與 **AT89S52** 的命令列 ISP 燒錄工具，�
 
 附圖的逐步說明請見 [docs/how-it-works.zh-TW.md](docs/how-it-works.zh-TW.md) ([English](docs/how-it-works.md))。
 
-AT89S51/S52 透過類似 SPI 的序列介面燒錄：`RST`、`SCK`、`MOSI`、`MISO`。燒錄時先將 `RST` 拉高，再依序送入固定的指令集 (Programming Enable、Chip Erase、讀寫程式記憶體、讀取簽名位元組)。確切的位元組序列請見 `src/isp.rs`，內容取自 Microchip 的 [AT89S51](https://www.microchip.com/en-us/product/AT89S51) 與 [AT89S52](https://www.microchip.com/en-us/product/AT89S52) 資料手冊 ("Serial Programming Instruction Set")，本 repo 不附資料手冊。
+AT89S51/S52 透過類似 SPI 的序列介面燒錄：`RST`、`SCK`、`MOSI`、`MISO`。燒錄時先將 `RST` 拉高，再依序送入固定的指令集 (Programming Enable、Chip Erase、讀寫程式記憶體、讀取簽名位元組)。確切的位元組序列請見 `src/isp.rs`，內容取自 Microchip 的 [AT89S51](https://www.microchip.com/en-us/product/AT89S51) 與 [AT89S52](https://www.microchip.com/en-us/product/AT89S52) 資料手冊 ("Serial Programming Instruction Set")。
 
 兩項容易忽略的硬體需求：
 
@@ -22,12 +22,14 @@ AT89S51/S52 透過類似 SPI 的序列介面燒錄：`RST`、`SCK`、`MOSI`、`M
 
 | 方案 | 轉接器韌體 | 主機端軟體 | 備註 |
 |------|------------|------------|------|
-| 本專案 (FT232RL / FT232H) | 不需要 | 單一 Rust 執行檔 | Linux、Windows、macOS |
+| 本專案 | 不需要 | 單一 Rust 執行檔 | Linux、Windows、macOS |
 | Arduino as ISP | 需先燒錄 sketch | avrdude 或自製工具 | |
 | USBasp 類 | 自訂韌體 | 相容 avrdude | |
-| 並列埠 | 不需要 | 僅限 Linux 的工具 | 現今電腦多半沒有並列埠 |
+| 並列埠 | 不需要 | 僅限 Linux 的工具 | 需要並列埠 |
 
 ## 安裝
+
+可直接從[發行頁](https://github.com/single9/at89s5x-programmer/releases/latest)下載 Linux (x86_64)、Windows (x86_64) 與 macOS (universal) 的預編譯執行檔。下載後請從步驟 3 (Linux)、4 (Windows) 或 5 (macOS) 繼續。若要自行編譯或使用 `cargo install`，請從步驟 1 開始。
 
 ### 1. 編譯工具與函式庫
 
@@ -43,17 +45,23 @@ git clone https://github.com/single9/at89s5x-programmer.git && cd at89s5x-progra
 cargo build --release          # 執行檔：target/release/at89s5x-isp
 ```
 
+或直接從 GitHub 安裝到 `~/.cargo/bin`：
+
+```sh
+cargo install --git https://github.com/single9/at89s5x-programmer
+```
+
 ### 3. Linux USB 權限
 
-FT232R 後端使用 libusb。程式執行期間會自動分離核心的 `ftdi_sio` 驅動程式，結束後再歸還，因此**不需要** `rmmod`，`/dev/ttyUSB*` 平時也能照常使用。只需要取得開啟 USB 裝置的權限：
+FT232R 後端使用 libusb。程式執行期間會自動分離核心的 `ftdi_sio` 驅動程式，結束後再歸還，因此**不需要** `rmmod`，`/dev/ttyUSB*` 平時也能照常使用。只需要取得開啟 USB 裝置的權限。在 repository 的複本中請執行：
 
 ```sh
 ./scripts/setup-linux.sh
 ```
 
-此腳本會檢查 libusb、將使用者加入 `plugdev` 群組，並安裝 udev 規則。完成後請**重新拔插轉接器** (若剛被加入 `plugdev`，還需登出再登入)。腳本可以重複執行。
+此腳本會將使用者加入 `plugdev` 群組，並安裝 udev 規則。完成後請**重新拔插轉接器** (若剛被加入 `plugdev`，還需登出再登入)。腳本可以重複執行。
 
-手動設定的做法：
+若是下載執行檔而沒有 repository，請手動設定：
 
 ```sh
 echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6001", GROUP="plugdev", MODE="0660"' \
