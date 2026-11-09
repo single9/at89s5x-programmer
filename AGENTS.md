@@ -14,7 +14,6 @@ is not obvious from the code.
 | `src/bitbang.rs` | FT232R software SPI over libusb (`rusb`), implements `SpiBus` + `OutputPin` |
 | `src/hexfile.rs` | Intel HEX loader |
 | `scripts/setup-linux.sh` | One-time udev rule + `plugdev` + libusb check |
-| `docs/datasheet/` | **Not in git** (gitignored, vendor copyright). Optional local copies of the AT89S51 / S52 datasheets; download from Microchip's product pages |
 | `README.zh-TW.md` | Traditional Chinese translation of `README.md`; keep the two in sync |
 | `docs/how-it-works.md` | Explanation of the design (English is primary; `how-it-works.zh-TW.md` is the Traditional Chinese translation, diagrams in `docs/img/` and `docs/img/zh-TW/`) |
 | `docs/wiring.svg` | Wiring diagram for both adapters (same wiring, different pin names) |
@@ -34,8 +33,8 @@ is not obvious from the code.
 - SCK < XTAL1 / 16. RST is active **high** for ISP (opposite of AVR).
 - DIP-40: RST 9, SCK 8 (P1.7), MISO 7 (P1.6), MOSI 6 (P1.5), EA/VPP 31
   (must be tied to VCC for internal flash), XTAL1 19, XTAL2 18, GND 20, VCC 40.
-- Converted datasheet `.md` files have garbled tables (e.g. the serial instruction
-  set). For exact fields read the PDF with `pdftotext -layout` (download it from Microchip; keep it in the gitignored `docs/datasheet/`).
+- The vendor datasheets are not kept in the repository (copyright). For exact
+  instruction fields use Microchip's AT89S51 / AT89S52 product pages.
 
 ## FT232R backend (`src/bitbang.rs`)
 
