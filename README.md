@@ -136,6 +136,11 @@ cargo run -- verify firmware.hex
 cargo run -- --serial A1B2C3D4 --clock-hz 50000 flash firmware.hex
 ```
 
+Speed: `verify` reads about 8 KB in 12 s at the default 100 kHz and in about
+2.4 s at `--clock-hz 700000`. SCK may go up to crystal / 16, so with a 12 MHz
+crystal 700000 is the practical maximum. `flash` only reads back the bytes it
+wrote, so small programs finish in under a second.
+
 Diagnostic commands (no flash is touched):
 
 ```sh

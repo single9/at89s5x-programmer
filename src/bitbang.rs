@@ -35,6 +35,9 @@ const FT232R_PID: u16 = 0x6001;
 const EP_OUT: u8 = 0x02;
 const EP_IN: u8 = 0x81;
 const USB_PACKET: usize = 64;
+/// Samples sent before reading back. The FT232R holds 256 bytes of readback,
+/// so stay below that; bigger batches mean fewer USB round trips.
+const BATCH: usize = 240;
 const TIMEOUT: Duration = Duration::from_secs(1);
 
 // FTDI vendor requests.
@@ -91,7 +94,7 @@ impl Inner {
     /// pin readback for each one.
     fn run(&mut self, pattern: &[u8]) -> Result<Vec<u8>, BitbangError> {
         let mut rx = Vec::with_capacity(pattern.len());
-        for chunk in pattern.chunks(USB_PACKET - 2) {
+        for chunk in pattern.chunks(BATCH) {
             self.dev
                 .write_bulk(EP_OUT, chunk, TIMEOUT)
                 .map_err(|e| usb_err("bulk write", e))?;

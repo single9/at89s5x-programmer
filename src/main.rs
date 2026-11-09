@@ -3,7 +3,9 @@ mod hexfile;
 mod isp;
 
 use std::fs;
+use std::io::{IsTerminal, Write};
 use std::path::PathBuf;
+use std::time::Instant;
 
 use anyhow::{ensure, Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
@@ -108,12 +110,45 @@ fn open_ft232h(
     Ok(At89s51Programmer::new(spi, rst))
 }
 
-fn print_progress(done: usize, total: usize) {
-    if done % 256 == 0 || done == total {
-        eprint!("\r  {done}/{total} bytes");
+/// One line of tool output: a fixed-width label, then the message.
+fn status(label: &str, msg: impl std::fmt::Display) {
+    eprintln!("{label:<10}{msg}");
+}
+
+/// Progress bar on a terminal; a single summary line when output is piped.
+struct Progress {
+    label: &'static str,
+    tty: bool,
+    start: Instant,
+    last_pct: usize,
+}
+
+impl Progress {
+    fn new(label: &'static str) -> Self {
+        Self { label, tty: std::io::stderr().is_terminal(), start: Instant::now(), last_pct: usize::MAX }
     }
-    if done == total {
-        eprintln!();
+
+    fn update(&mut self, done: usize, total: usize) {
+        let pct = done * 100 / total.max(1);
+        if !self.tty || pct == self.last_pct {
+            return;
+        }
+        self.last_pct = pct;
+        let filled = pct * 30 / 100;
+        eprint!(
+            "\r{:<10}[{}{}] {pct:>3}%  {done}/{total} B",
+            self.label,
+            "#".repeat(filled),
+            "-".repeat(30 - filled)
+        );
+        let _ = std::io::stderr().flush();
+    }
+
+    fn finish(self, summary: impl std::fmt::Display) {
+        if self.tty {
+            eprint!("\r\x1b[2K");
+        }
+        status(self.label, format!("{summary}  ({:.1} s)", self.start.elapsed().as_secs_f32()));
     }
 }
 
@@ -147,13 +182,6 @@ fn detect_adapter(serial: Option<&str>) -> Result<Adapter> {
     let adapter = first.context(
         "no supported adapter found (FT232R 0403:6001 or FT232H 0403:6014); check the USB connection, or pass --adapter",
     )?;
-    eprintln!(
-        "Detected adapter: {}",
-        match adapter {
-            Adapter::Ft232h => "FT232H",
-            Adapter::Ft232r => "FT232R",
-        }
-    );
     Ok(adapter)
 }
 
@@ -163,6 +191,17 @@ fn main() -> Result<()> {
         Some(a) => a,
         None => detect_adapter(cli.serial.as_deref())?,
     };
+    status(
+        "Adapter",
+        format!(
+            "{}, SCK {} kHz",
+            match adapter {
+                Adapter::Ft232h => "FT232H (MPSSE)",
+                Adapter::Ft232r => "FT232R (bit-bang)",
+            },
+            cli.clock_hz as f32 / 1000.0
+        ),
+    );
     match adapter {
         Adapter::Ft232h => {
             let prog = open_ft232h(cli.serial.as_deref(), cli.clock_hz)?;
@@ -203,56 +242,79 @@ where
     E1: std::error::Error + Send + Sync + 'static,
     E2: std::error::Error + Send + Sync + 'static,
 {
+    let t0 = Instant::now();
     let signature = prog.read_signature()?;
     let chip = Chip::from_signature(signature);
-    eprintln!(
-        "Signature: {:02X} {:02X} {:02X} ({})",
-        signature[0],
-        signature[1],
-        signature[2],
-        match chip {
-            Some(chip) => chip.name().to_string(),
-            None => format!("unrecognised - assuming {DEFAULT_FLASH_SIZE} bytes flash, continuing anyway"),
-        }
-    );
+    let sig = format!("{:02X} {:02X} {:02X}", signature[0], signature[1], signature[2]);
     let flash_size = chip.map_or(DEFAULT_FLASH_SIZE, Chip::flash_size);
+    match chip {
+        Some(chip) => status(
+            "Device",
+            format!("{}  signature {sig}  {} KB flash", chip.name(), chip.flash_size() / 1024),
+        ),
+        None => status(
+            "Device",
+            format!("unrecognised signature {sig}; assuming {} KB flash", DEFAULT_FLASH_SIZE / 1024),
+        ),
+    }
 
     match command {
         Command::Info | Command::Selftest | Command::Probe { .. } | Command::Rst { .. } => {}
-        Command::Erase => {
-            eprintln!("Erasing chip...");
-            prog.chip_erase()?;
-            eprintln!("Done.");
-        }
+        Command::Erase => erase(prog)?,
         Command::Flash {
             file,
             no_erase,
             no_verify,
         } => {
             let image = load_hex(&file, flash_size)?;
+            let used = image.iter().filter(|&&b| b != 0xFF).count();
+            status("Image", format!("{}  {used} B to write", file.display()));
 
             if !no_erase {
-                eprintln!("Erasing chip...");
-                prog.chip_erase()?;
+                erase(prog)?;
             }
 
-            eprintln!("Writing {} bytes...", image.len());
-            prog.write_flash(&image, print_progress)?;
+            let mut p = Progress::new("Writing");
+            prog.write_flash(&image, |d, t| p.update(d, t))?;
+            p.finish(format!("{used} B written"));
 
             if !no_verify {
-                eprintln!("Verifying...");
-                prog.verify_flash(&image, print_progress)?;
-                eprintln!("Verify OK.");
+                // After our own chip erase everything past the last data byte
+                // is blank, so only the used range needs reading back.
+                let end = if no_erase {
+                    image.len()
+                } else {
+                    image.iter().rposition(|&b| b != 0xFF).map_or(0, |i| i + 1)
+                };
+                let mut p = Progress::new("Verifying");
+                prog.verify_flash(&image[..end], |d, t| p.update(d, t))?;
+                p.finish(format!("{end} B OK"));
             }
+            status("Done", format!("{:.1} s total", t0.elapsed().as_secs_f32()));
         }
         Command::Verify { file } => {
             let image = load_hex(&file, flash_size)?;
-            eprintln!("Verifying {} bytes...", image.len());
-            prog.verify_flash(&image, print_progress)?;
-            eprintln!("Verify OK.");
+            let mut p = Progress::new("Verifying");
+            prog.verify_flash(&image, |d, t| p.update(d, t))?;
+            p.finish(format!("{} B OK", image.len()));
         }
     }
 
+    Ok(())
+}
+
+fn erase<SPI, RST, E1, E2>(prog: &mut At89s51Programmer<SPI, RST>) -> Result<()>
+where
+    SPI: SpiBus<u8, Error = E1>,
+    RST: OutputPin<Error = E2>,
+    E1: std::error::Error + Send + Sync + 'static,
+    E2: std::error::Error + Send + Sync + 'static,
+{
+    let start = Instant::now();
+    eprint!("{:<10}", "Erasing");
+    let _ = std::io::stderr().flush();
+    prog.chip_erase()?;
+    eprintln!("chip erased  ({:.1} s)", start.elapsed().as_secs_f32());
     Ok(())
 }
 

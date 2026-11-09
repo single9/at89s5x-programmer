@@ -43,6 +43,10 @@ is not obvious from the code.
 - Readback lags output by one sample, so MISO for a bit is read from the
   entry **after** the SCK-high sample; the pattern ends with one extra entry.
 - Every IN packet carries 2 modem-status bytes that must be stripped.
+- `run()` sends up to `BATCH` = 240 samples before reading back (the chip
+  buffers 256 bytes of readback). Larger batches stall; verify reads 32
+  frames per SPI transfer (`read_block`). Time scales ~1/clock-hz.
+- After our own chip erase, `flash` verifies only up to the last non-0xFF byte.
 - Uses libusb (`rusb`) with auto-detach of `ftdi_sio`. D2XX was tried first
   and abandoned: on Linux it cannot see a device `ftdi_sio` has claimed
   (`DEVICE_NOT_FOUND`), forcing `rmmod` every plug-in. FT232H still uses D2XX.

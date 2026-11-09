@@ -91,14 +91,21 @@ where
             last = buf;
 
             if attempt == 0 {
-                eprintln!("Programming Enable reply mismatch, retrying with a fresh RST pulse...");
+                eprintln!("Warning: no reply to Programming Enable, retrying with a fresh RST pulse");
             }
         }
+        let hint = match last {
+            [0x00, 0x00, 0x00, 0x00] => "all 00: MISO is stuck low or the target is held in a bad state",
+            [0xFF, 0xFF, 0xFF, 0xFF] => "all FF: MISO is floating high, nothing is driving it",
+            _ => "unstable replies: SCK is not reaching the target reliably, or its clock is unstable",
+        };
         bail!(
-            "Programming Enable failed: no 0x69 reply from the target (last reply: {:02X} {:02X} {:02X} {:02X}).\n\
-             An all-00 reply usually means MISO is stuck low / not connected; all-FF means it floats high.\n\
-             Check wiring (RST/SCK/MOSI/MISO), that the target has power, and\n\
-             that its crystal/oscillator is actually running.",
+            "target did not answer Programming Enable (last reply {:02X} {:02X} {:02X} {:02X}, {hint})\n\n\
+             Check:\n  \
+             - power and GND are shared with the adapter\n  \
+             - the crystal is running (about 2 V on XTAL2, with load capacitors)\n  \
+             - EA/VPP (pin 31) is tied to VCC\n  \
+             - RST, SCK, MOSI and MISO go to pins 9, 8, 6 and 7",
             last[0], last[1], last[2], last[3]
         );
     }
@@ -214,14 +221,6 @@ where
         Ok(())
     }
 
-    pub fn read_byte(&mut self, addr: u16) -> Result<u8> {
-        let mut buf = [0x20, (addr >> 8) as u8, addr as u8, 0x00];
-        self.spi
-            .transfer_in_place(&mut buf)
-            .context("SPI transfer failed during Read Program Memory")?;
-        Ok(buf[3])
-    }
-
     pub fn write_flash(&mut self, image: &[u8], mut progress: impl FnMut(usize, usize)) -> Result<()> {
         // Erased flash already reads 0xFF, so blank bytes are skipped.
         for (i, &byte) in image.iter().enumerate() {
@@ -233,15 +232,33 @@ where
         Ok(())
     }
 
+    /// Read `len` consecutive bytes starting at `addr`, several Read Program
+    /// Memory frames per SPI transfer to save USB round trips.
+    pub fn read_block(&mut self, addr: usize, len: usize) -> Result<Vec<u8>> {
+        let mut buf = Vec::with_capacity(len * 4);
+        for a in addr..addr + len {
+            buf.extend_from_slice(&[0x20, (a >> 8) as u8, a as u8, 0x00]);
+        }
+        self.spi
+            .transfer_in_place(&mut buf)
+            .context("SPI transfer failed during Read Program Memory")?;
+        Ok(buf.chunks(4).map(|frame| frame[3]).collect())
+    }
+
     pub fn verify_flash(&mut self, image: &[u8], mut progress: impl FnMut(usize, usize)) -> Result<()> {
-        for (i, &expected) in image.iter().enumerate() {
-            let actual = self.read_byte(i as u16)?;
-            if actual != expected {
+        const BLOCK: usize = 32;
+        for (n, expected) in image.chunks(BLOCK).enumerate() {
+            let base = n * BLOCK;
+            let actual = self.read_block(base, expected.len())?;
+            if let Some(i) = (0..expected.len()).find(|&i| actual[i] != expected[i]) {
                 bail!(
-                    "Verify failed at address 0x{i:04X}: expected 0x{expected:02X}, read 0x{actual:02X}"
+                    "Verify failed at address 0x{:04X}: expected 0x{:02X}, read 0x{:02X}",
+                    base + i,
+                    expected[i],
+                    actual[i]
                 );
             }
-            progress(i + 1, image.len());
+            progress(base + expected.len(), image.len());
         }
         Ok(())
     }
