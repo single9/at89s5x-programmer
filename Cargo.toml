@@ -1,6 +1,6 @@
 [package]
 name = "at89s5x-isp"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 license = "MIT"
 description = "ISP programmer for AT89S51/AT89S52 using an FT232RL or FT232H"
