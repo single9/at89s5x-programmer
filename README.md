@@ -149,22 +149,13 @@ so the logic levels match. Counterfeit FT232RL chips may misbehave in
 bit-bang mode. The FT232H path has not been tested on real hardware, and only
 the FT232RL path has been verified.
 
-### Target circuit
+### Example target circuit
 
-![Schematic: FT232RL + AT89S52 minimal system](docs/schematic.svg)
+![Schematic: FT232RL + AT89S52 with a P1.0 LED](docs/schematic.svg)
 
-The adapter does not drive these. They must already be on the target board:
-
-- `VCC` (pin 40) powered, `GND` (pin 20) shared with the adapter
-- `EA/VPP` (pin 31) tied to `+5V` so the CPU executes from internal flash
-- A crystal (e.g. 11.0592 MHz) with two ~22 pF load caps on `XTAL1`/`XTAL2`
-  (pins 19/18), running
-- A decoupling cap across `VCC`/`GND`
-- **C6: 10 µF capacitor, VCC to RST.** Forms a power-on reset circuit with R1.
-  Required when the target runs standalone, optional while programming.
-- **R1: 10 kΩ pull-down resistor, RST to GND.** Holds RST low while the adapter
-  is not driving it, preventing spurious resets from a floating pin. The
-  adapter drives RST push-pull and overrides the pull-down.
+This is the circuit for the [LED blink example](#example). The adapter drives
+only the ISP signals, so the target board needs its own power, crystal and
+reset network, as shown.
 
 ### No manual reset button
 
@@ -237,8 +228,8 @@ active-low (VCC, resistor, LED, P1.0), then:
 cargo run -- flash examples/blink_p1_0.hex
 ```
 
-Verified on a real AT89S52. RST must read low afterwards (R1 to GND) or the
-program will not run.
+Verified on a real AT89S52. After programming, RST must be low (pulled down by
+R1) for the program to run.
 
 ## Troubleshooting
 

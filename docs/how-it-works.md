@@ -24,7 +24,7 @@ On the AT89S series, RST is **active high**. The sequence is:
 3. Send the programming commands.
 4. Drive RST low. The chip restarts and runs the program that was just written.
 
-The target board needs **R1 (10 kΩ, RST to GND)** so that RST returns to a low level once the adapter releases the pin. Without it the program does not run.
+The target board needs **R1 (10 kΩ, RST to GND)** to pull RST low once the adapter releases the pin. A high RST holds the CPU in reset, so without R1 the program does not run.
 
 ### 2.2 SPI Timing
 
