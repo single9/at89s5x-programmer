@@ -24,7 +24,7 @@ On the AT89S series, RST is **active high**. The sequence is:
 3. Send the programming commands.
 4. Drive RST low. The chip restarts and runs the program that was just written.
 
-The target board needs **R1 (10 kΩ, RST to GND)** so that RST returns to a low level once the adapter releases the pin; otherwise the program does not run.
+The target board needs **R1 (10 kΩ, RST to GND)** so that RST returns to a low level once the adapter releases the pin. Without it the program does not run.
 
 ### 2.2 SPI Timing
 
@@ -34,7 +34,7 @@ The target board needs **R1 (10 kΩ, RST to GND)** so that RST returns to a low 
 - **MOSI** carries the data sent by the host, one bit per clock, most significant bit first.
 - **MISO** carries the chip's reply, simultaneously with MOSI. Every byte sent also receives one byte back.
 
-SCK must stay below 1/16 of the chip's clock frequency. With a 12 MHz crystal the limit is 750 kHz; the tool defaults to 100 kHz, which leaves a wide margin.
+SCK must stay below 1/16 of the chip's clock frequency. With a 12 MHz crystal the limit is 750 kHz. The tool defaults to 100 kHz, which leaves a wide margin.
 
 ### 2.3 Instruction Set
 
@@ -156,7 +156,7 @@ These commands help with hardware problems and never touch the flash:
 - Windows needs the WinUSB driver (Zadig) for the adapter. On macOS the system FTDI driver may require `sudo`.
 - The FT232H path is untested.
 - Lock bits are not handled, only flash contents.
-- Other families (AT89LP, AT89S8252 and so on) use different instruction sets; check the datasheet before assuming support.
+- Other families (AT89LP, AT89S8252 and so on) use different instruction sets. Check the datasheet before assuming support.
 
 ## 8. Source Map
 

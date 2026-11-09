@@ -28,11 +28,11 @@ Instruction Set").
 Two hardware requirements that are easy to miss:
 
 - **The target needs its own running crystal/oscillator.** The ISP shift
-  register is clocked internally off `XTAL1`; the adapter does not supply a
+  register is clocked internally off `XTAL1`. The adapter does not supply a
   clock signal.
 - **SCK must stay below 1/16 of the target's crystal frequency.** The
   default `--clock-hz 100000` is conservative and safe for any crystal
-  ≥ 3.2 MHz; lower it if you're using a slower crystal.
+  ≥ 3.2 MHz. Lower it if you're using a slower crystal.
 
 ## Comparison with other approaches
 
@@ -82,7 +82,7 @@ echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6001", GROUP="
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
-The rule is permanent; other computers need the same one-time setup.
+The rule is permanent. Other computers need the same one-time setup.
 
 ### 4. Windows
 
@@ -111,11 +111,11 @@ xattr -d com.apple.quarantine at89s5x-isp   # required once, see below
 ```
 
 The binary is not notarized, so macOS blocks it when it was downloaded with a
-browser (verified). The `xattr` command removes the quarantine flag that the
-browser added; it is harmless if the flag is not present.
+browser. The `xattr` command removes the quarantine flag that the
+browser added.
 
 If opening the adapter fails with an access error, the system's FTDI driver
-may own the device; try running with `sudo`.
+may own the device. Try running with `sudo`.
 
 ## Wiring
 
@@ -123,7 +123,7 @@ may own the device; try running with `sudo`.
 
 ![Wiring diagram](docs/wiring.svg)
 
-Both adapters use the same wiring; only the adapter-side pin names differ.
+Both adapters use the same wiring, and only the adapter-side pin names differ.
 
 | Signal | AT89S5x pin | FT232RL (bit-bang) | FT232H (MPSSE, untested) |
 |--------|-------------|--------------------|--------------------------|
@@ -135,28 +135,25 @@ Both adapters use the same wiring; only the adapter-side pin names differ.
 
 Set the board's VCCIO/jumper to the target's supply voltage (3.3 V or 5 V)
 so the logic levels match. Counterfeit FT232RL chips may misbehave in
-bit-bang mode. The FT232H path has not been tested on real hardware; only
+bit-bang mode. The FT232H path has not been tested on real hardware, and only
 the FT232RL path has been verified.
 
 ### Target circuit
 
 ![Schematic: FT232RL + AT89S52 minimal system](docs/schematic.svg)
 
-The adapter does not drive these; they must already be on the target board:
+The adapter does not drive these. They must already be on the target board:
 
 - `VCC` (pin 40) powered, `GND` (pin 20) shared with the adapter
 - `EA/VPP` (pin 31) tied to `+5V` so the CPU executes from internal flash
 - A crystal (e.g. 11.0592 MHz) with two ~22 pF load caps on `XTAL1`/`XTAL2`
   (pins 19/18), running
 - A decoupling cap across `VCC`/`GND`
-- **C6: a 10 µF capacitor from VCC to RST** (with R1 it forms a power-on reset),
-  needed when the target runs on its own without the programmer attached.
-  It is optional while programming, because the adapter overrides it.
-- **R1: a 10 kΩ resistor from RST to GND**, so RST has a defined level
-  whenever the adapter isn't actively driving it (before the programmer
-  opens the device, or if it's unplugged). Without it RST would float and
-  could spuriously reset the target. The adapter drives RST push-pull, so it
-  overrides the weak pull-down without conflict.
+- **C6: 10 µF capacitor, VCC to RST.** Forms a power-on reset circuit with R1.
+  Required when the target runs standalone, optional while programming.
+- **R1: 10 kΩ pull-down resistor, RST to GND.** Holds RST low while the adapter
+  is not driving it, preventing spurious resets from a floating pin. The
+  adapter drives RST push-pull and overrides the pull-down.
 
 ### No manual reset button
 
@@ -222,7 +219,7 @@ target's crystal needs checking (see Troubleshooting).
 ## Example
 
 `examples/blink_p1_0.hex` blinks an LED on P1.0 (pin 1) at about 2 Hz with a
-12 MHz crystal; `examples/blink_p1_0.asm` is its source. Wire the LED
+12 MHz crystal. `examples/blink_p1_0.asm` is its source. Wire the LED
 active-low (VCC, resistor, LED, P1.0), then:
 
 ```sh
@@ -238,7 +235,7 @@ program will not run.
 replies that keep changing, means the target is not synchronising:
 
 1. Run `selftest` with MOSI jumpered to MISO. If it passes, the adapter is fine.
-2. Check the target crystal really oscillates (XTAL2, pin 18, about 2 V; 0 V or
+2. Check the target crystal really oscillates (XTAL2, pin 18, about 2 V, while 0 V or
    5 V means it is not running) and has a 22–30 pF cap from each crystal pin to GND.
 3. Check VCC/GND decoupling (0.1 µF), EA/VPP (pin 31) at VCC, and keep wires short.
 4. Remove other loads from P1.5–P1.7 (LEDs, buttons) and, as a test, C6 on RST.
@@ -254,7 +251,7 @@ A 12 MHz crystal is fine: SCK only has to stay below crystal / 16 (750 kHz).
   An unrecognised signature falls back to 4 KB with a warning.
 - Lock bits are not currently read/written — only flash contents.
 - FT232H only: it uses the D2XX driver (`libftd2xx`), which on Linux cannot
-  open a device the kernel's `ftdi_sio` has claimed; unbind it or use
+  open a device the kernel's `ftdi_sio` has claimed. Unbind it or use
   `libftd2xx`'s supplied udev rules first.
 
 ## License

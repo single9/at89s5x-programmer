@@ -16,7 +16,7 @@ AT89S51/S52 透過類似 SPI 的序列介面燒錄：`RST`、`SCK`、`MOSI`、`M
 兩項容易忽略的硬體需求：
 
 - **目標板必須有自己的晶體振盪器且正在運作。** ISP 移位暫存器由 `XTAL1` 在內部提供時脈，轉接器不會提供時脈訊號。
-- **SCK 必須低於目標板晶體頻率的 1/16。** 預設的 `--clock-hz 100000` 相當保守，適用於任何 ≥ 3.2 MHz 的晶體；若使用較慢的晶體，請調低此值。
+- **SCK 必須低於目標板晶體頻率的 1/16。** 預設的 `--clock-hz 100000` 相當保守，適用於任何 ≥ 3.2 MHz 的晶體。若使用較慢的晶體，請調低此值。
 
 ## 與其他方案的比較
 
@@ -61,7 +61,7 @@ echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6001", GROUP="
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
-此規則為永久設定；其他電腦需各自做一次相同的設定。
+此規則為永久設定。其他電腦需各自做一次相同的設定。
 
 ### 4. Windows
 
@@ -82,7 +82,7 @@ xattr -d com.apple.quarantine at89s5x-isp   # 只需執行一次，說明見下�
 ./at89s5x-isp info
 ```
 
-此執行檔未經 Apple 公證，以瀏覽器下載時會被 macOS 擋下 (已實測)。`xattr` 指令會移除瀏覽器加上的隔離標記；若檔案沒有這個標記，執行它也無害。
+此執行檔未經 Apple 公證，以瀏覽器下載時會被 macOS 擋下。`xattr` 指令會移除瀏覽器加上的隔離標記。
 
 若開啟轉接器時出現存取錯誤，可能是系統的 FTDI 驅動程式佔用了裝置，請改用 `sudo` 執行。
 
@@ -113,9 +113,9 @@ xattr -d com.apple.quarantine at89s5x-isp   # 只需執行一次，說明見下�
 - `VCC` (pin 40) 已供電，`GND` (pin 20) 與轉接器共地
 - `EA/VPP` (pin 31) 接 `+5V`，使 CPU 從內部 Flash 執行
 - 晶體振盪器 (例如 11.0592 MHz) 搭配兩顆約 22 pF 的負載電容，接在 `XTAL1` / `XTAL2` (pin 19 / 18)，且正在運作
-- 跨接在 `VCC` / `GND` 之間的去耦電容
-- **C6：10 µF 電容，接在 VCC 與 RST 之間** (與 R1 構成上電重置)。目標板脫離燒錄器獨立運作時需要；燒錄期間為選用，因為轉接器的驅動會蓋過它。
-- **R1：10 kΩ 電阻，接在 RST 與 GND 之間**，使轉接器未驅動 RST 時 (程式開啟裝置之前，或轉接器被拔除時) RST 仍有確定的準位。沒有它，RST 會浮接，可能讓目標板被誤重置。轉接器以推挽方式驅動 RST，可直接蓋過這個弱下拉，不會衝突。
+- `VCC` / `GND` 之間的去耦電容
+- **C6：10 µF 電容，接於 VCC 與 RST 之間。** 與 R1 構成電源開啟重置 (power-on reset) 電路。目標板獨立運作時必須有，燒錄時可省略。
+- **R1：10 kΩ 電阻，接於 RST 與 GND 之間。** 作為下拉電阻，在轉接器未驅動 RST 時維持低準位，避免 RST 浮接而誤觸發重置。轉接器以推挽式輸出驅動 RST，可克服此下拉電阻。
 
 ### 不需要手動重置按鈕
 
@@ -170,7 +170,7 @@ Device    AT89S52  signature 1E 52 06  8 KB flash
 
 ## 範例
 
-`examples/blink_p1_0.hex` 會讓 P1.0 (pin 1) 上的 LED 閃爍，12 MHz 晶體下約 2 Hz；`examples/blink_p1_0.asm` 是其原始碼。請將 LED 接成低電位點亮 (VCC、電阻、LED、P1.0)，然後執行：
+`examples/blink_p1_0.hex` 會讓 P1.0 (pin 1) 上的 LED 閃爍，12 MHz 晶體下約 2 Hz。`examples/blink_p1_0.asm` 是其原始碼。請將 LED 接成低電位點亮 (VCC、電阻、LED、P1.0)，然後執行：
 
 ```sh
 cargo run -- flash examples/blink_p1_0.hex
@@ -183,7 +183,7 @@ cargo run -- flash examples/blink_p1_0.hex
 若出現 `target did not answer Programming Enable`，且回覆為 `FF FF FF FF`，或回覆一直變動，代表目標板沒有正常同步：
 
 1. 將 MOSI 與 MISO 短路後執行 `selftest`。若通過，代表轉接器沒有問題。
-2. 確認目標板的晶體振盪器確實在振盪 (XTAL2，pin 18，約 2 V；0 V 或 5 V 代表沒有運作)，且兩支晶體腳各有一顆 22 到 30 pF 的電容接地。
+2. 確認目標板的晶體振盪器確實在振盪 (XTAL2，pin 18，約 2 V，0 V 或 5 V 代表沒有運作)，且兩支晶體腳各有一顆 22 到 30 pF 的電容接地。
 3. 檢查 VCC / GND 的去耦電容 (0.1 µF)、EA/VPP (pin 31) 是否接 VCC，並讓連接線保持短。
 4. 移除 P1.5 至 P1.7 上的其他負載 (LED、按鈕)，並暫時拆掉 RST 上的 C6 做測試。
 5. 改用較慢的時脈，例如 `--clock-hz 5000`。
