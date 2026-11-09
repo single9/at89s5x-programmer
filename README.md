@@ -75,8 +75,22 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
 The rule is permanent; other computers need the same one-time setup.
-Windows needs the WinUSB driver (e.g. via Zadig), which stops the adapter
-working as a COM port; Windows and macOS are untested.
+
+### 4. Windows (FT232R)
+
+Windows is supported for the FT232R path (verified with an FT232RL). Use the
+`.zip` from the releases page, or build from source with the MSVC toolchain.
+The `.exe` has no extra runtime requirements.
+
+1. Install the **WinUSB** driver for the adapter with
+   [Zadig](https://zadig.akeo.ie/): select the FT232R, choose WinUSB, and
+   install.
+2. Run `at89s5x-isp.exe info` from a terminal.
+
+While WinUSB is bound, the adapter no longer appears as a COM port. To use it
+as a serial port again, reinstall FTDI's driver in Device Manager.
+
+macOS is not verified yet; Linux and Windows are the supported platforms.
 
 ## Wiring
 

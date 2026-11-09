@@ -52,7 +52,18 @@ echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6001", GROUP="
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
-此規則為永久設定；其他電腦需各自做一次相同的設定。Windows 需要 WinUSB 驅動程式 (例如透過 Zadig)，安裝後轉接器就不能再當作 COM 埠使用。Windows 與 macOS 均未測試。
+此規則為永久設定；其他電腦需各自做一次相同的設定。
+
+### 4. Windows (FT232R)
+
+FT232R 路徑支援 Windows (已用 FT232RL 驗證)。請從發行頁下載 `.zip`，或以 MSVC 工具鏈自行編譯。`.exe` 不需要額外的執行環境。
+
+1. 用 [Zadig](https://zadig.akeo.ie/) 為轉接器安裝 **WinUSB** 驅動程式：選擇 FT232R，驅動程式選 WinUSB 後安裝。
+2. 在終端機執行 `at89s5x-isp.exe info`。
+
+綁定 WinUSB 之後，轉接器不會再顯示為 COM 埠。若要恢復成序列埠，請在裝置管理員中重新安裝 FTDI 的驅動程式。
+
+macOS 尚未驗證；目前支援的平台是 Linux 與 Windows。
 
 ## 接線
 

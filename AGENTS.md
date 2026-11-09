@@ -70,7 +70,11 @@ is not obvious from the code.
 - The previous signature code read the index from the wrong address byte and
   expected `1E 51 FF`; both were changed per the datasheet.
 - Lock bits and page-mode read/write are not implemented (byte mode only).
-- Windows/macOS untested.
+- Windows: verified by the user with an FT232RL (WinUSB via Zadig). CI builds
+  Windows, macOS and Linux (`ci.yml`); the Windows .exe links D2XX and the CRT
+  statically (`Cargo.toml`, `.cargo/config.toml`), so it needs no extra DLLs.
+- macOS: compiles in CI, not tested on hardware. libusb cannot auto-detach
+  there, so `open()` ignores `NotSupported` and relies on `claim_interface`.
 
 ## Environment gotchas
 

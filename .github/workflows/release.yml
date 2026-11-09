@@ -1,6 +1,6 @@
 name: Release
 
-# Push a tag such as v0.1.0 to build the binary and publish a GitHub release.
+# Push a tag such as v0.2.0 to build the binaries and publish a GitHub release.
 on:
   push:
     tags: ["v*"]
@@ -12,8 +12,21 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x86_64
+            bin: at89s5x-isp
+          - os: windows-latest
+            platform: windows-x86_64
+            bin: at89s5x-isp.exe
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
@@ -25,10 +38,9 @@ jobs:
             exit 1
           fi
 
-      - name: Install toolchain and libusb
+      - name: Install libusb (Linux)
+        if: runner.os == 'Linux'
         run: |
-          rustup toolchain install stable --profile minimal
-          rustup default stable
           sudo apt-get update
           sudo apt-get install -y pkg-config libusb-1.0-0-dev
 
@@ -40,29 +52,51 @@ jobs:
 
       - name: Package
         run: |
-          name="at89s5x-isp-${GITHUB_REF_NAME}-linux-x86_64"
+          name="at89s5x-isp-${GITHUB_REF_NAME}-${{ matrix.platform }}"
           mkdir "$name"
-          cp target/release/at89s5x-isp README.md README.zh-TW.md LICENSE "$name"/
+          cp "target/release/${{ matrix.bin }}" README.md README.zh-TW.md LICENSE "$name"/
           cp -r examples "$name"/
-          tar czf "$name.tar.gz" "$name"
-          sha256sum "$name.tar.gz" > "$name.tar.gz.sha256"
-          ldd target/release/at89s5x-isp
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            7z a "$name.zip" "$name" > /dev/null
+            archive="$name.zip"
+          else
+            tar czf "$name.tar.gz" "$name"
+            archive="$name.tar.gz"
+          fi
+          sha256sum "$archive" > "$archive.sha256"
+          echo "archive=$archive" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}
+          path: |
+            ${{ env.archive }}
+            ${{ env.archive }}.sha256
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           cat > notes.md <<'NOTES'
-          Prebuilt Linux x86_64 binary of `at89s5x-isp`.
+          Prebuilt binaries of `at89s5x-isp` for Linux x86_64 and Windows x86_64.
 
-          - Verified on real hardware: FT232RL (bit-bang) with an AT89S52.
-          - Not verified: AT89S51 on a real chip, the FT232H path, Windows and macOS.
-          - USB permissions on Linux: run `scripts/setup-linux.sh` from the repository once.
+          - Verified on real hardware: FT232RL (bit-bang) with an AT89S52, on Linux and Windows.
+          - Not verified: AT89S51 on a real chip, the FT232H path, macOS (no prebuilt binary yet).
+          - Linux: run `scripts/setup-linux.sh` from the repository once for USB permissions.
+          - Windows: install the WinUSB driver for the adapter with Zadig first.
           - See the README for wiring and usage.
           NOTES
-          gh release create "$GITHUB_REF_NAME" \
-            "at89s5x-isp-${GITHUB_REF_NAME}-linux-x86_64.tar.gz" \
-            "at89s5x-isp-${GITHUB_REF_NAME}-linux-x86_64.tar.gz.sha256" \
+          gh release create "$GITHUB_REF_NAME" dist/* \
             --title "$GITHUB_REF_NAME" \
             --notes-file notes.md \
             --generate-notes \
