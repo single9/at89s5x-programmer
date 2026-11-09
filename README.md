@@ -5,9 +5,9 @@
 A command-line ISP programmer for the Atmel/Microchip **AT89S51** and
 **AT89S52**, driven through a USB-to-serial/SPI adapter:
 
-- **FT232RL / FT232R** (cheap UART bridge boards) — software SPI over
+- **FT232RL / FT232R** (cheap UART bridge boards): software SPI over
   bit-bang mode
-- **FT232H** — hardware SPI over MPSSE (**untested on real hardware**)
+- **FT232H**: hardware SPI over MPSSE (**untested on real hardware**)
 
 ## How it works
 
@@ -18,7 +18,7 @@ A step-by-step explanation with diagrams is in
 The AT89S51/S52 are programmed through an SPI-like serial interface: `RST`,
 `SCK`, `MOSI`, `MISO`. Programming is done by holding `RST` high and clocking a
 fixed instruction set (Programming Enable, Chip Erase, Read/Write Program
-Memory, Read Signature Byte) into the part — see `src/isp.rs` for the exact
+Memory, Read Signature Byte) into the part. See `src/isp.rs` for the exact
 byte sequences, taken from the Microchip datasheets for the
 [AT89S51](https://www.microchip.com/en-us/product/AT89S51) and
 [AT89S52](https://www.microchip.com/en-us/product/AT89S52) ("Serial Programming
@@ -161,7 +161,7 @@ reset network, as shown.
 
 Entering ISP mode doesn't require a button: `enter_programming_mode()`
 (`src/isp.rs`) drives RST directly, so running `flash` right after plugging
-in the adapter is enough — the pulse/enable sequence happens automatically
+in the adapter is enough. The pulse/enable sequence happens automatically
 every time.
 
 ## Usage
@@ -251,7 +251,7 @@ A 12 MHz crystal is fine: SCK only has to stay below crystal / 16 (750 kHz).
 - The chip is auto-detected from its signature bytes (AT89S51 = `1E 51 06`,
   AT89S52 = `1E 52 06`) and the flash size (4 KB / 8 KB) is chosen to match.
   An unrecognised signature falls back to 4 KB with a warning.
-- Lock bits are not currently read/written — only flash contents.
+- Lock bits are not currently read or written, only flash contents.
 - FT232H only: it uses the D2XX driver (`libftd2xx`), which on Linux cannot
   open a device the kernel's `ftdi_sio` has claimed. Unbind it or use
   `libftd2xx`'s supplied udev rules first.
