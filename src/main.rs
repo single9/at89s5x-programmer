@@ -14,16 +14,10 @@ use ftdi_embedded_hal::libftd2xx::{Ft232h, Ftdi};
 
 use isp::{At89s51Programmer, Chip, DEFAULT_FLASH_SIZE};
 
-/// AT89S51 SPI ISP programmer, driven through an FT232H USB-SPI adapter.
+/// ISP programmer for AT89S51 / AT89S52, driven through an FT232RL or FT232H.
 ///
-/// Wiring (FT232H -> AT89S51 DIP-40):
-///   AD0 (SCK)  -> P1.7 (SCK, pin 8)
-///   AD1 (MOSI) -> P1.5 (MOSI, pin 6)
-///   AD2 (MISO) -> P1.6 (MISO, pin 7)
-///   AD3        -> RST (pin 9)
-///   GND        -> GND (pin 20)
-/// The target must have its own crystal/oscillator running and be powered;
-/// the FT232H does not supply a clock or drive VCC.
+/// The target must be powered and have its own crystal running; the adapter
+/// does not supply a clock or drive VCC. See the README for wiring.
 #[derive(Parser)]
 #[command(version, about)]
 struct Cli {
