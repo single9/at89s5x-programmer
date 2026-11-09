@@ -198,3 +198,7 @@ A 12 MHz crystal is fine: SCK only has to stay below crystal / 16 (750 kHz).
 - FT232H only: it uses the D2XX driver (`libftd2xx`), which on Linux cannot
   open a device the kernel's `ftdi_sio` has claimed; unbind it or use
   `libftd2xx`'s supplied udev rules first.
+
+## License
+
+[MIT](LICENSE). The datasheets in `docs/datasheet/` belong to their respective owners.
