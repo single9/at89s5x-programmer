@@ -78,6 +78,8 @@ is not obvious from the code.
   for macOS in `Cargo.toml`); Homebrew's libusb is arm64-only and dynamic.
   libusb cannot auto-detach on macOS/Windows, so `open()` ignores
   `NotSupported` and relies on `claim_interface`.
+  The release binary is not notarized: a browser-downloaded copy is blocked
+  until `xattr -d com.apple.quarantine` is run (verified by the user).
 
 ## Environment gotchas
 

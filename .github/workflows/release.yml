@@ -141,7 +141,7 @@ jobs:
           - Not verified: AT89S51 on a real chip, the FT232H path.
           - Linux: run `scripts/setup-linux.sh` from the repository once for USB permissions.
           - Windows: install the WinUSB driver for the adapter with Zadig first.
-          - macOS: if the system blocks the binary, run `xattr -d com.apple.quarantine at89s5x-isp`.
+          - macOS: the binary is not notarized, so a browser download is blocked until you run `xattr -d com.apple.quarantine at89s5x-isp` once after extracting.
           - See the README for wiring and usage.
           NOTES
           gh release create "$GITHUB_REF_NAME" dist/* \
