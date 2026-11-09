@@ -69,9 +69,10 @@ FT232R 路徑支援 macOS (已用 FT232RL 驗證)。發行版提供單一的通�
 
 ```sh
 tar xzf at89s5x-isp-*-macos-universal.tar.gz && cd at89s5x-isp-*-macos-universal
-xattr -d com.apple.quarantine at89s5x-isp   # 下載的檔案會被隔離
 ./at89s5x-isp info
 ```
+
+若 macOS 因為檔案來自網路 (未經公證) 而拒絕執行，請先移除隔離標記再重試：`xattr -d com.apple.quarantine at89s5x-isp`。
 
 若開啟轉接器時出現存取錯誤，可能是系統的 FTDI 驅動程式佔用了裝置，請改用 `sudo` 執行。
 

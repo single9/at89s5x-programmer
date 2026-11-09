@@ -98,9 +98,12 @@ libusb built in, so nothing else needs to be installed.
 
 ```sh
 tar xzf at89s5x-isp-*-macos-universal.tar.gz && cd at89s5x-isp-*-macos-universal
-xattr -d com.apple.quarantine at89s5x-isp   # the download is quarantined
 ./at89s5x-isp info
 ```
+
+If macOS refuses to run the binary because it was downloaded from the internet
+(it is not notarized), remove the quarantine flag and try again:
+`xattr -d com.apple.quarantine at89s5x-isp`.
 
 If opening the adapter fails with an access error, the system's FTDI driver
 may own the device; try running with `sudo`.
