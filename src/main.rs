@@ -50,10 +50,33 @@ enum Adapter {
     Ft232r,
 }
 
+#[derive(Clone, Copy, ValueEnum)]
+enum RstLevel {
+    High,
+    Low,
+}
+
 #[derive(Subcommand)]
 enum Command {
     /// Read and print the device signature bytes.
     Info,
+    /// Bench diagnostic: hold RST high and repeat Programming Enable so the
+    /// pins can be probed; prints the reply whenever it changes.
+    Probe {
+        /// How long to run, in seconds.
+        #[arg(long, default_value_t = 30)]
+        seconds: u64,
+    },
+    /// Bench diagnostic: drive RST to a fixed level so pin 9 can be measured.
+    Rst {
+        /// `high` or `low`.
+        level: RstLevel,
+        /// How long to hold it, in seconds.
+        #[arg(long, default_value_t = 20)]
+        seconds: u64,
+    },
+    /// Adapter test with no target: jumper MOSI to MISO and check the echo.
+    Selftest,
     /// Erase the whole chip (flash contents and lock bits).
     Erase,
     /// Write a HEX file to flash.
@@ -91,7 +114,9 @@ fn open_ft232h(
 }
 
 fn print_progress(done: usize, total: usize) {
-    eprint!("\r  {done}/{total} bytes");
+    if done % 256 == 0 || done == total {
+        eprint!("\r  {done}/{total} bytes");
+    }
     if done == total {
         eprintln!();
     }
@@ -118,6 +143,14 @@ where
     E1: std::error::Error + Send + Sync + 'static,
     E2: std::error::Error + Send + Sync + 'static,
 {
+    match command {
+        Command::Selftest => return prog.loopback_test(),
+        Command::Probe { seconds } => return prog.probe(seconds),
+        Command::Rst { level, seconds } => {
+            return prog.hold_rst(matches!(level, RstLevel::High), seconds)
+        }
+        _ => {}
+    }
     prog.enter_programming_mode()?;
     let result = run(&mut prog, command);
     prog.exit_programming_mode()?;
@@ -146,7 +179,7 @@ where
     let flash_size = chip.map_or(DEFAULT_FLASH_SIZE, Chip::flash_size);
 
     match command {
-        Command::Info => {}
+        Command::Info | Command::Selftest | Command::Probe { .. } | Command::Rst { .. } => {}
         Command::Erase => {
             eprintln!("Erasing chip...");
             prog.chip_erase()?;

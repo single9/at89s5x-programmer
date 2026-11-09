@@ -9,7 +9,7 @@ is not obvious from the code.
 
 | Path | Role |
 |------|------|
-| `src/main.rs` | CLI (clap), `--adapter ft232h\|ft232r`, `execute`/`run` generic over `SpiBus` + `OutputPin` |
+| `src/main.rs` | CLI (clap), `--adapter ft232h\|ft232r`, `execute`/`run` generic over `SpiBus` + `OutputPin`; `selftest` = MOSI-MISO loopback, no target needed |
 | `src/isp.rs` | ISP protocol (`At89s51Programmer`), `Chip` detection from signature, delays |
 | `src/bitbang.rs` | FT232R software SPI over libusb (`rusb`), implements `SpiBus` + `OutputPin` |
 | `src/hexfile.rs` | Intel HEX loader |
@@ -22,6 +22,9 @@ is not obvious from the code.
 - Signatures: S51 = `1E 51 06`, S52 = `1E 52 06`, read at addresses
   `0x000`, `0x100`, `0x200`. In the serial command `28 AH AL xx` the index
   goes in the **upper** address byte (AH), AL = 0. Flash: S51 4 KB, S52 8 KB.
+- Programming Enable `AC 53 xx xx`: the target answers **0x69 in byte 4**
+  (datasheet table, "0110 1001 (Output)" under Byte 4). The 0x53 echo in
+  byte 3 is AVR behaviour; the original code checked that and always failed.
 - Chip Erase is self-timed, **500 ms** (`tERASE`); a read during erase
   returns 00H. Byte write `tSWC` = 64 tCLCL + 400 µs (code waits 4 ms).
 - Wait >= 10 ms after power/RST before Programming Enable (code: 20 ms).
@@ -46,10 +49,15 @@ is not obvious from the code.
 
 ## Status / not yet verified
 
-- Nothing has been tested against real hardware: the bit-bang MISO timing
-  and the baud divisor encoding (`baud_to_value_index`) compile but are
-  unproven. First check: `cargo run -- --adapter ft232r info` should print
-  `1E 51 06 (AT89S51)` / `1E 52 06 (AT89S52)`.
+- FT232R side verified on real hardware (2026-11-08): `selftest` (MOSI
+  jumpered to MISO, no target) echoes all bytes back, so the bit-bang
+  timing, MISO sampling lag and baud divisor encoding are correct.
+- Verified on a real AT89S52 (2026-11-09): `info` reads `1E 52 06`, `flash`
+  (erase, write, verify) and `verify` pass. Earlier `FF FF FF FF` / unstable
+  replies came from the target side (crystal/wiring), not the software. Blank
+  0xFF bytes are skipped on write; progress prints every 256 bytes.
+- Not yet tried on a real AT89S51.
+- Diagnostics: `selftest`, `probe`, `rst`, env `AT89S51_ISP_TRACE=1`.
 - The previous signature code read the index from the wrong address byte and
   expected `1E 51 FF`; both were changed per the datasheet.
 - Lock bits and page-mode read/write are not implemented (byte mode only).

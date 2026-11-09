@@ -73,6 +73,7 @@ where
     /// Enable. Retries once with a fresh RST pulse, since the datasheet notes
     /// the first attempt can occasionally fail if SCK wasn't stable at power-up.
     pub fn enter_programming_mode(&mut self) -> Result<()> {
+        let mut last = [0u8; 4];
         for attempt in 0..2 {
             self.pulse_reset()?;
 
@@ -81,19 +82,90 @@ where
                 .transfer_in_place(&mut buf)
                 .context("SPI transfer failed during Programming Enable")?;
 
-            if buf[2] == 0x53 {
+            // AT89S51/52 answer Programming Enable with 0x69 in byte 4
+            // (datasheet, Serial Programming Instruction Set). The 0x53 echo
+            // in byte 3 is AVR behaviour, not 8051.
+            if buf[3] == 0x69 {
                 return Ok(());
             }
+            last = buf;
 
             if attempt == 0 {
-                eprintln!("Programming Enable echo mismatch, retrying with a fresh RST pulse...");
+                eprintln!("Programming Enable reply mismatch, retrying with a fresh RST pulse...");
             }
         }
         bail!(
-            "Programming Enable failed: no 0x53 echo from the target.\n\
+            "Programming Enable failed: no 0x69 reply from the target (last reply: {:02X} {:02X} {:02X} {:02X}).\n\
+             An all-00 reply usually means MISO is stuck low / not connected; all-FF means it floats high.\n\
              Check wiring (RST/SCK/MOSI/MISO), that the target has power, and\n\
-             that its crystal/oscillator is actually running."
+             that its crystal/oscillator is actually running.",
+            last[0], last[1], last[2], last[3]
         );
+    }
+
+    /// Adapter self-test: with MOSI jumpered to MISO (and no target needed),
+    /// every byte clocked out must come straight back. Does not touch RST.
+    pub fn loopback_test(&mut self) -> Result<()> {
+        let tx = [0xA5, 0x3C, 0x00, 0xFF, 0x81, 0x7E];
+        let mut rx = tx;
+        self.spi
+            .transfer_in_place(&mut rx)
+            .context("SPI transfer failed during loopback test")?;
+        let hex = |b: &[u8]| b.iter().map(|x| format!("{x:02X}")).collect::<Vec<_>>().join(" ");
+        eprintln!("sent:     {}", hex(&tx));
+        eprintln!("received: {}", hex(&rx));
+        if rx == tx {
+            eprintln!("Loopback OK: SCK/MOSI/MISO timing and sampling work.");
+            return Ok(());
+        }
+        let hint = if rx.iter().all(|&b| b == 0xFF) {
+            "all FF: MISO floats high - the MOSI<->MISO jumper is missing or on the wrong pin."
+        } else if rx.iter().all(|&b| b == 0x00) {
+            "all 00: MISO is stuck low - check the jumper and that nothing else drives RTS#."
+        } else {
+            "partial match: sampling is off by a bit/sample (timing issue) or the clock is too fast."
+        };
+        bail!("Loopback FAILED, {hint}");
+    }
+
+    /// Bench diagnostic: drive RST to a fixed level for `seconds`, then release.
+    pub fn hold_rst(&mut self, high: bool, seconds: u64) -> Result<()> {
+        if high {
+            self.rst.set_high().context("failed to drive RST high")?;
+        } else {
+            self.rst.set_low().context("failed to drive RST low")?;
+        }
+        eprintln!(
+            "RST driven {} for {seconds} s - measure pin 9 now.",
+            if high { "HIGH" } else { "LOW" }
+        );
+        sleep(Duration::from_secs(seconds));
+        self.rst.set_low().context("failed to release RST")?;
+        Ok(())
+    }
+
+    /// Bench diagnostic: hold RST high and send Programming Enable over and
+    /// over, so pin 9 / SCK / MOSI can be probed with a meter or scope.
+    /// Prints the reply whenever it changes.
+    pub fn probe(&mut self, seconds: u64) -> Result<()> {
+        self.pulse_reset()?;
+        eprintln!("RST is now held HIGH (pin 9 should read ~VCC) for {seconds} s.");
+        eprintln!("Sending AC 53 00 00 every 50 ms; printing replies as they change.");
+        let end = std::time::Instant::now() + Duration::from_secs(seconds);
+        let mut last: Option<[u8; 4]> = None;
+        while std::time::Instant::now() < end {
+            let mut buf = [0xAC, 0x53, 0x00, 0x00];
+            self.spi
+                .transfer_in_place(&mut buf)
+                .context("SPI transfer failed during probe")?;
+            if last != Some(buf) {
+                eprintln!("reply: {:02X} {:02X} {:02X} {:02X}", buf[0], buf[1], buf[2], buf[3]);
+                last = Some(buf);
+            }
+            sleep(Duration::from_millis(50));
+        }
+        self.rst.set_low().context("failed to release RST")?;
+        Ok(())
     }
 
     fn pulse_reset(&mut self) -> Result<()> {
@@ -151,8 +223,11 @@ where
     }
 
     pub fn write_flash(&mut self, image: &[u8], mut progress: impl FnMut(usize, usize)) -> Result<()> {
+        // Erased flash already reads 0xFF, so blank bytes are skipped.
         for (i, &byte) in image.iter().enumerate() {
-            self.write_byte(i as u16, byte)?;
+            if byte != 0xFF {
+                self.write_byte(i as u16, byte)?;
+            }
             progress(i + 1, image.len());
         }
         Ok(())

@@ -151,7 +151,20 @@ impl Inner {
 
     fn set_rst(&mut self, high: bool) -> Result<(), BitbangError> {
         let state = if high { self.out | RST } else { self.out & !RST };
-        self.run(&[state]).map(|_| ())
+        // Second entry: readback lags by one sample, so it shows the settled pins.
+        let rx = self.run(&[state, state])?;
+        if std::env::var_os("AT89S51_ISP_TRACE").is_some() {
+            let p = rx[1];
+            eprintln!(
+                "trace: drove RST {} -> pins read back: SCK={} MOSI={} MISO={} RST={}",
+                if high { "high" } else { "low" },
+                p & SCK != 0,
+                p & MOSI != 0,
+                p & MISO != 0,
+                p & RST != 0
+            );
+        }
+        Ok(())
     }
 }
 

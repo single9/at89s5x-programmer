@@ -141,11 +141,42 @@ cargo run -- --adapter ft232r verify firmware.hex
 cargo run -- --adapter ft232r --serial A1B2C3D4 --clock-hz 50000 flash firmware.hex
 ```
 
+Diagnostic commands (no flash is touched):
+
+```sh
+# MOSI jumpered to MISO, no target needed: checks the adapter's SPI timing
+cargo run -- --adapter ft232r selftest
+
+# Hold RST high and send Programming Enable every 50 ms, printing replies
+cargo run -- --adapter ft232r probe --seconds 30
+
+# Hold RST high/low for N seconds, to measure pin 9 with a multimeter
+cargo run -- --adapter ft232r rst high --seconds 20
+```
+
+Set `AT89S51_ISP_TRACE=1` to print the pin states read back when RST changes.
+
 A good first check is `info`: it should print `Signature: 1E 51 06 (AT89S51)`
 or `1E 52 06 (AT89S52)`. `Programming Enable failed` means wiring, power, or
 the target's crystal needs checking.
 
+## Troubleshooting
+
+`Programming Enable failed` with reply `FF FF FF FF`, or replies that keep
+changing, means the target is not synchronising:
+
+1. Run `selftest` with MOSI jumpered to MISO. If it passes, the adapter is fine.
+2. Check the target crystal really oscillates (XTAL2, pin 18, about 2 V; 0 V or
+   5 V means it is not running) and has a 22–30 pF cap from each crystal pin to GND.
+3. Check VCC/GND decoupling (0.1 µF), EA/VPP (pin 31) at VCC, and keep wires short.
+4. Remove other loads from P1.5–P1.7 (LEDs, buttons) and RST (RC reset circuit).
+5. Try a slower clock, e.g. `--clock-hz 5000`.
+
+A 12 MHz crystal is fine: SCK only has to stay below crystal / 16 (750 kHz).
+
 ## Notes / limitations
+
+- Blank (`0xFF`) bytes are skipped when writing, since erased flash is already `0xFF`.
 
 - The chip is auto-detected from its signature bytes (AT89S51 = `1E 51 06`,
   AT89S52 = `1E 52 06`) and the flash size (4 KB / 8 KB) is chosen to match.
