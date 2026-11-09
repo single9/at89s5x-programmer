@@ -11,7 +11,7 @@ Atmel / Microchip **AT89S51** 與 **AT89S52** 的命令列 ISP 燒錄工具，�
 
 附圖的逐步說明請見 [docs/how-it-works.zh-TW.md](docs/how-it-works.zh-TW.md) ([English](docs/how-it-works.md))。
 
-AT89S51 與 STC 89 系列不同，沒有 UART 啟動載入程式 (bootloader)，而是提供類似 SPI 的序列燒錄介面：`RST`、`SCK`、`MOSI`、`MISO`。燒錄時先將 `RST` 拉高，再依序送入固定的指令集 (Programming Enable、Chip Erase、讀寫程式記憶體、讀取簽名位元組)。確切的位元組序列請見 `src/isp.rs`，內容取自 Microchip 的 [AT89S51](https://www.microchip.com/en-us/product/AT89S51) 與 [AT89S52](https://www.microchip.com/en-us/product/AT89S52) 資料手冊 ("Serial Programming Instruction Set")。
+AT89S51 與 STC 89 系列不同，沒有 UART 啟動載入程式 (bootloader)，而是提供類似 SPI 的序列燒錄介面：`RST`、`SCK`、`MOSI`、`MISO`。燒錄時先將 `RST` 拉高，再依序送入固定的指令集 (Programming Enable、Chip Erase、讀寫程式記憶體、讀取簽名位元組)。確切的位元組序列請見 `src/isp.rs`，內容取自 Microchip 的 [AT89S51](https://www.microchip.com/en-us/product/AT89S51) 與 [AT89S52](https://www.microchip.com/en-us/product/AT89S52) 資料手冊 ("Serial Programming Instruction Set")，本 repo 不附資料手冊。
 
 兩項容易忽略的硬體需求：
 
@@ -167,4 +167,4 @@ cargo run -- flash examples/blink_p1_0.hex
 
 ## 授權
 
-[MIT](LICENSE)。不包含廠商資料手冊，請參閱上方連結。
+[MIT](LICENSE)。
